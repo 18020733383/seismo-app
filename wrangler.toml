@@ -1,0 +1,4 @@
+[[d1_databases]]
+binding = "DB" 
+database_name = "seismo-db"
+database_id = "bb895f5b-6ba5-48bc-a61d-4189f8679177"
