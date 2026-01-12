@@ -3,22 +3,36 @@ import { IntensityLevel, LevelConfig } from '../types';
 
 interface Props {
   level: IntensityLevel;
-  onSubmit: (content: string, isAftershock: boolean) => void;
+  onSubmit: (content: string, isAftershock: boolean, tags: string[]) => void;
   onCancel: () => void;
+  existingTags?: string[];
 }
 
-export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel }) => {
+export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel, existingTags = [] }) => {
   const [content, setContent] = useState('');
   const [isAftershock, setIsAftershock] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const config = LevelConfig[level];
 
-  // Auto focus logic or scroll into view could go here
-  
+  const handleAddTag = (tag: string) => {
+    const cleanTag = tag.trim().replace(/^#/, '');
+    if (cleanTag && !selectedTags.includes(cleanTag)) {
+      setSelectedTags([...selectedTags, cleanTag]);
+    }
+    setTagInput('');
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setSelectedTags(selectedTags.filter(t => t !== tagToRemove));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    onSubmit(content, isAftershock);
+    onSubmit(content, isAftershock, selectedTags);
     setContent('');
+    setSelectedTags([]);
   };
 
   return (
@@ -79,6 +93,63 @@ export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel 
             <label htmlFor="aftershock" className="text-sm text-gray-600 cursor-pointer select-none">
               这是余震 (Aftershock / 反刍)
             </label>
+          </div>
+
+          {/* Tag System */}
+          <div className="mb-6">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">事件标签 / Tags</p>
+            
+            {/* Selected Tags */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {selectedTags.map(tag => (
+                <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 text-xs font-bold border border-blue-100 animate-in zoom-in-50 duration-200">
+                  #{tag}
+                  <button type="button" onClick={() => removeTag(tag)} className="hover:text-red-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </span>
+              ))}
+            </div>
+
+            {/* Tag Input */}
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag(tagInput);
+                  }
+                }}
+                placeholder="添加客观标签 (如 #组会)"
+                className="flex-1 px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddTag(tagInput)}
+                className="px-4 py-2 rounded-xl bg-slate-800 text-white text-sm font-bold active:scale-95 transition-transform"
+              >
+                添加
+              </button>
+            </div>
+
+            {/* Existing Tags Suggestions */}
+            {existingTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {existingTags.filter(tag => !selectedTags.includes(tag)).slice(0, 8).map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleAddTag(tag)}
+                    className="px-2 py-1 rounded-md bg-slate-100 text-slate-500 text-[10px] font-bold hover:bg-slate-200 transition-colors"
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex space-x-3">

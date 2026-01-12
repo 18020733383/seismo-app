@@ -68,6 +68,17 @@ export const HistoryList: React.FC<Props> = ({ logs, onDelete }) => {
                     <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed font-medium">
                         {log.content}
                     </p>
+                    
+                    {log.tags && log.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-3 mb-1">
+                        {log.tags.map(tag => (
+                          <span key={tag} className="text-[9px] font-bold text-blue-500 bg-blue-50/50 px-2 py-0.5 rounded border border-blue-100/30">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100 pt-2 italic">
                       核心定义：{config.coreDefinition}
                     </p>

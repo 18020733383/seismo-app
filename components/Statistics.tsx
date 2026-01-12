@@ -48,6 +48,20 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
 
   const maxTimelineCount = Math.max(...timelineData.map(d => d.count), 1);
 
+  // 3. Tag Distribution Processing
+  const tagCounts: Record<string, number> = {};
+  logs.forEach(log => {
+    (log.tags || []).forEach(tag => {
+      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+    });
+  });
+
+  const sortedTags = Object.entries(tagCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10);
+
+  const maxTagCount = Math.max(...Object.values(tagCounts), 1);
+
   return (
     <div className="space-y-6 pb-10">
       {/* Summary Cards */}
@@ -144,6 +158,36 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           })}
         </div>
       </div>
+
+      {/* Tag Cloud / Distribution */}
+      {sortedTags.length > 0 && (
+        <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
+          <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
+            <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+            客观事件分布 (Top 10)
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {sortedTags.map(([tag, count]) => {
+              const fontSize = 0.75 + (count / maxTagCount) * 0.75;
+              const opacity = 0.5 + (count / maxTagCount) * 0.5;
+              
+              return (
+                <div 
+                  key={tag}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white/60 border border-white/80 shadow-sm transition-all hover:scale-110 hover:shadow-md"
+                  style={{ 
+                    opacity,
+                    transform: `scale(${fontSize})`
+                  }}
+                >
+                  <span className="text-xs font-black text-slate-700">#{tag}</span>
+                  <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-lg">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Empty State */}
       {totalCount === 0 && (

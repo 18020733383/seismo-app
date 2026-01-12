@@ -70,7 +70,7 @@ function App() {
     }, 100);
   };
 
-  const handleLogSubmit = async (content: string, isAftershock: boolean) => {
+  const handleLogSubmit = async (content: string, isAftershock: boolean, tags: string[]) => {
     if (!currentLevel) return;
 
     const newLog: SeismicLog = {
@@ -79,6 +79,7 @@ function App() {
       content,
       isAftershock,
       timestamp: Date.now(),
+      tags,
     };
 
     // Optimistic update
@@ -162,7 +163,8 @@ function App() {
             <EarthquakeLogInput 
                 level={currentLevel} 
                 onSubmit={handleLogSubmit} 
-                onCancel={handleCancel} 
+                onCancel={handleCancel}
+                existingTags={Array.from(new Set(logs.flatMap(log => log.tags || [])))}
             />
           ) : (
             <div className="px-4">

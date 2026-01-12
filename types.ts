@@ -13,6 +13,7 @@ export interface SeismicLog {
   content: string;
   isAftershock: boolean;
   timestamp: number;
+  tags?: string[];
 }
 
 export interface LevelMetadata {

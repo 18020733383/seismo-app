@@ -9,10 +9,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       "SELECT * FROM logs ORDER BY timestamp DESC"
     ).all();
     
-    // Convert isAftershock from 0/1 to boolean
+    // Convert isAftershock from 0/1 to boolean and parse tags
     const logs = results.map(row => ({
       ...row,
-      isAftershock: !!row.isAftershock
+      isAftershock: !!row.isAftershock,
+      tags: row.tags ? JSON.parse(row.tags as string) : []
     }));
 
     return new Response(JSON.stringify(logs), {
@@ -32,9 +33,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const log = await context.request.json() as any;
     
     await DB.prepare(
-      "INSERT INTO logs (id, intensity, content, isAftershock, timestamp) VALUES (?, ?, ?, ?, ?)"
+      "INSERT INTO logs (id, intensity, content, isAftershock, timestamp, tags) VALUES (?, ?, ?, ?, ?, ?)"
     )
-      .bind(log.id, log.intensity, log.content, log.isAftershock ? 1 : 0, log.timestamp)
+      .bind(log.id, log.intensity, log.content, log.isAftershock ? 1 : 0, log.timestamp, JSON.stringify(log.tags || []))
       .run();
 
     return new Response(JSON.stringify({ success: true }), {
