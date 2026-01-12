@@ -44,18 +44,18 @@ function App() {
     localStorage.setItem('seismo-logs', JSON.stringify(logs));
   }, [logs]);
 
-  // Handle visual Level 1 Alarm
+  // Handle visual Alarm Effects
   useEffect(() => {
-    // If it's Level 1, we might want to play a sound in a real app, 
-    // but here we just ensure the visual state is consistent.
-    if (currentLevel === IntensityLevel.Level1) {
+    if (currentLevel === IntensityLevel.Level1 || currentLevel === IntensityLevel.Level2) {
         document.body.style.backgroundColor = '#1a0505';
+    } else if (currentLevel === IntensityLevel.Level3) {
+        document.body.style.backgroundColor = '#0f172a';
     } else {
-        document.body.style.backgroundColor = '#f0f4f8';
+        document.body.style.backgroundColor = '#f8fafc';
     }
     
     return () => {
-        document.body.style.backgroundColor = '#f0f4f8';
+        document.body.style.backgroundColor = '#f8fafc';
     }
   }, [currentLevel]);
 

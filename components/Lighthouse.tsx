@@ -7,26 +7,34 @@ interface LighthouseProps {
 
 export const Lighthouse: React.FC<LighthouseProps> = ({ level }) => {
   // Determine animation states based on level
-  const isShaking = level === IntensityLevel.Level1 || level === IntensityLevel.Level2;
-  const isStormy = level === IntensityLevel.Level1 || level === IntensityLevel.Level2;
+  const isExtremeShaking = level === IntensityLevel.Level1;
+  const isShaking = level === IntensityLevel.Level2 || level === IntensityLevel.Level3;
+  const isMildShaking = level === IntensityLevel.Level4;
+  const isStormy = level === IntensityLevel.Level1 || level === IntensityLevel.Level2 || level === IntensityLevel.Level3;
+  
   const skyColor = level === IntensityLevel.Level1 
-    ? 'fill-red-900' 
+    ? 'fill-red-950' 
     : level === IntensityLevel.Level2 
-      ? 'fill-gray-800' 
-      : 'fill-transparent'; // Default handled by parent background
+      ? 'fill-gray-900' 
+      : level === IntensityLevel.Level3
+        ? 'fill-slate-800'
+        : 'fill-transparent';
 
   const beamColor = level === IntensityLevel.Level1 
-    ? 'rgba(255, 0, 0, 0.6)' 
-    : 'rgba(255, 255, 200, 0.5)';
+    ? 'rgba(255, 0, 0, 0.8)' 
+    : level === IntensityLevel.Level2
+      ? 'rgba(255, 100, 0, 0.6)'
+      : 'rgba(255, 255, 200, 0.5)';
 
   return (
-    <div className={`relative w-full h-64 md:h-80 transition-all duration-700 overflow-hidden rounded-b-[3rem] ${isShaking ? 'animate-shake' : ''}`}>
+    <div className={`relative w-full h-64 md:h-80 transition-all duration-700 overflow-hidden rounded-b-[3rem] 
+      ${isExtremeShaking ? 'animate-shake-extreme' : isShaking ? 'animate-shake' : isMildShaking ? 'animate-shake-mild' : ''}`}>
        {/* Sky/Atmosphere Layer */}
        <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
          <rect width="100%" height="100%" className={`transition-colors duration-1000 ${skyColor}`} />
          
          {/* Moon / Sun */}
-         <circle cx="85%" cy="20%" r="30" className={`transition-all duration-1000 ${level === IntensityLevel.Level1 ? 'fill-red-600' : 'fill-yellow-100 opacity-80'}`} />
+         <circle cx="85%" cy="20%" r="30" className={`transition-all duration-1000 ${level === IntensityLevel.Level1 ? 'fill-red-600 blur-sm' : 'fill-yellow-100 opacity-80'}`} />
          
          {/* Clouds */}
          <g className={`transition-transform duration-[10s] ${isStormy ? 'translate-x-10' : 'translate-x-0'}`}>

@@ -38,16 +38,21 @@ export const HistoryList: React.FC<Props> = ({ logs, onDelete }) => {
                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${config.color} opacity-80`}></div>
 
                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center space-x-2">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded text-white ${config.color}`}>
-                            L{log.intensity}
-                        </span>
-                        {log.isAftershock && (
-                            <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                                余震
+                    <div className="flex flex-col">
+                        <div className="flex items-center space-x-2">
+                            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded text-white ${config.color}`}>
+                                L{log.intensity}
                             </span>
-                        )}
-                        <span className="text-xs text-gray-400">
+                            <span className={`text-sm font-black ${config.textColor}`}>
+                              【{config.alertName}】
+                            </span>
+                            {log.isAftershock && (
+                                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    余震/反刍
+                                </span>
+                            )}
+                        </div>
+                        <span className="text-[10px] text-slate-400 mt-1 font-medium">
                             {new Date(log.timestamp).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                     </div>
@@ -59,9 +64,14 @@ export const HistoryList: React.FC<Props> = ({ logs, onDelete }) => {
                     </button>
                  </div>
                  
-                 <p className="text-gray-700 text-sm whitespace-pre-wrap pl-2 leading-relaxed font-medium">
-                    {log.content}
-                 </p>
+                 <div className="pl-2">
+                    <p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed font-medium">
+                        {log.content}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100 pt-2 italic">
+                      核心定义：{config.coreDefinition}
+                    </p>
+                 </div>
               </div>
             </div>
           );
