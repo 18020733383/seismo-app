@@ -30,9 +30,18 @@ export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel,
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    onSubmit(content, isAftershock, selectedTags);
+    
+    // Automatically add current tag input if it's not empty
+    let finalTags = [...selectedTags];
+    const cleanTag = tagInput.trim().replace(/^#/, '');
+    if (cleanTag && !finalTags.includes(cleanTag)) {
+      finalTags.push(cleanTag);
+    }
+    
+    onSubmit(content, isAftershock, finalTags);
     setContent('');
     setSelectedTags([]);
+    setTagInput('');
   };
 
   return (

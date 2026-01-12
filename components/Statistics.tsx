@@ -160,12 +160,12 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       </div>
 
       {/* Tag Cloud / Distribution */}
-      {sortedTags.length > 0 && (
-        <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
-          <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
-            <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
-            客观事件分布 (Top 10)
-          </h3>
+      <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
+        <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
+          <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+          客观事件分布 (Top 10)
+        </h3>
+        {sortedTags.length > 0 ? (
           <div className="flex flex-wrap gap-3">
             {sortedTags.map(([tag, count]) => {
               const fontSize = 0.75 + (count / maxTagCount) * 0.75;
@@ -186,8 +186,12 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-xs text-slate-400">暂无标签记录，在记录震感时添加 #标签 即可看到分布</p>
+          </div>
+        )}
+      </div>
 
       {/* Empty State */}
       {totalCount === 0 && (

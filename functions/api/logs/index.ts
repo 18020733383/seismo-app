@@ -10,11 +10,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     ).all();
     
     // Convert isAftershock from 0/1 to boolean and parse tags
-    const logs = results.map(row => ({
-      ...row,
-      isAftershock: !!row.isAftershock,
-      tags: row.tags ? JSON.parse(row.tags as string) : []
-    }));
+    // Support both 'tags' and 'tag' column names just in case
+    const logs = results.map(row => {
+      const tagsStr = (row.tags || row.tag) as string | undefined;
+      return {
+        ...row,
+        isAftershock: !!row.isAftershock,
+        tags: tagsStr ? JSON.parse(tagsStr) : []
+      };
+    });
 
     return new Response(JSON.stringify(logs), {
       headers: { "Content-Type": "application/json" },
