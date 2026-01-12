@@ -4,6 +4,7 @@ import { ControlPanel } from './components/ControlPanel';
 import { EarthquakeLogInput } from './components/EarthquakeLogInput';
 import { HistoryList } from './components/HistoryList';
 import { IntensityLevel, SeismicLog, LevelConfig } from './types';
+import { Statistics } from './components/Statistics';
 
 // Simple UUID generator
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -12,7 +13,7 @@ function App() {
   const [logs, setLogs] = useState<SeismicLog[]>([]);
   const [currentLevel, setCurrentLevel] = useState<IntensityLevel | null>(null);
   const [isInputting, setIsInputting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'home' | 'logs'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'logs' | 'stats'>('home');
   const [isLoading, setIsLoading] = useState(true);
 
   // Load from API
@@ -170,7 +171,7 @@ function App() {
                   onSelectLevel={handleLevelSelect} 
                   selectedLevel={currentLevel} 
                 />
-              ) : (
+              ) : activeTab === 'logs' ? (
                 <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <h2 className="text-xl font-bold text-slate-800 mb-4 px-2">观测日志</h2>
                   {isLoading ? (
@@ -180,6 +181,11 @@ function App() {
                   ) : (
                     <HistoryList logs={logs} onDelete={handleDelete} />
                   )}
+                </div>
+              ) : (
+                <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <h2 className="text-xl font-bold text-slate-800 mb-4 px-2">震感统计</h2>
+                  <Statistics logs={logs} />
                 </div>
               )}
             </div>
@@ -210,6 +216,17 @@ function App() {
               </div>
               <span className={`text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'logs' ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-0.5'}`}>日志</span>
               {activeTab === 'logs' && <div className="absolute bottom-2 w-1 h-1 bg-blue-600 rounded-full"></div>}
+            </button>
+
+            <button 
+              onClick={() => setActiveTab('stats')}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative ${activeTab === 'stats' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <div className={`p-2 rounded-xl transition-all duration-300 ${activeTab === 'stats' ? 'bg-blue-50 animate-nav-pop' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'stats' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'stats' ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-0.5'}`}>统计</span>
+              {activeTab === 'stats' && <div className="absolute bottom-2 w-1 h-1 bg-blue-600 rounded-full"></div>}
             </button>
           </nav>
         )}
