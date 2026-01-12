@@ -155,7 +155,7 @@ function App() {
         </header>
 
         {/* Dynamic Content Area */}
-        <main className="flex-1 relative z-20 -mt-10 pb-24">
+        <main className={`flex-1 relative z-20 pb-24 transition-all duration-500 ${activeTab === 'home' ? '-mt-10' : 'mt-0'}`}>
           
           {isInputting && currentLevel ? (
             <EarthquakeLogInput 
@@ -189,21 +189,27 @@ function App() {
 
         {/* Bottom Navigation */}
         {!isInputting && (
-          <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/80 backdrop-blur-lg border-t border-slate-200 flex justify-around items-center py-3 px-6 z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+          <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/90 backdrop-blur-xl border-t border-slate-200 flex justify-around items-stretch h-20 z-30 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] rounded-t-3xl">
             <button 
               onClick={() => setActiveTab('home')}
-              className={`flex flex-col items-center gap-1 transition-all duration-300 ${activeTab === 'home' ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative ${activeTab === 'home' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              <span className="text-[10px] font-bold uppercase tracking-wider">记录</span>
+              <div className={`p-2 rounded-xl transition-all duration-300 ${activeTab === 'home' ? 'bg-blue-50 animate-nav-pop' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'home' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'home' ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-0.5'}`}>记录</span>
+              {activeTab === 'home' && <div className="absolute bottom-2 w-1 h-1 bg-blue-600 rounded-full"></div>}
             </button>
             
             <button 
               onClick={() => setActiveTab('logs')}
-              className={`flex flex-col items-center gap-1 transition-all duration-300 ${activeTab === 'logs' ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative ${activeTab === 'logs' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-              <span className="text-[10px] font-bold uppercase tracking-wider">日志</span>
+              <div className={`p-2 rounded-xl transition-all duration-300 ${activeTab === 'logs' ? 'bg-blue-50 animate-nav-pop' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'logs' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'logs' ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-0.5'}`}>日志</span>
+              {activeTab === 'logs' && <div className="absolute bottom-2 w-1 h-1 bg-blue-600 rounded-full"></div>}
             </button>
           </nav>
         )}

@@ -17,24 +17,27 @@ export const HistoryList: React.FC<Props> = ({ logs, onDelete }) => {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto p-4 pb-20">
-      <h3 className="text-gray-500 font-bold mb-4 ml-2">观测日志 (Seismic Logs)</h3>
-      <div className="space-y-4">
+    <div className="w-full max-w-md mx-auto p-4 pb-20 pt-8">
+      <h3 className="text-gray-500 font-bold mb-6 ml-2 flex items-center gap-2">
+        <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
+        观测日志 (Seismic Logs)
+      </h3>
+      <div className="space-y-6">
         {logs.map((log) => {
           const config = LevelConfig[log.intensity];
           return (
-            <div key={log.id} className="relative pl-6 group">
+            <div key={log.id} className="relative pl-6 group animate-in fade-in slide-in-from-left-4 duration-500">
               {/* Timeline Line */}
-              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-200 group-last:h-1/2"></div>
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-200/50 group-last:h-1/2"></div>
               
               {/* Timeline Dot */}
-              <div className={`absolute left-[-5px] top-4 w-3 h-3 rounded-full border-2 border-white ${config.color}`}></div>
+              <div className={`absolute left-[-5px] top-4 w-3 h-3 rounded-full border-2 border-white shadow-sm ${config.color}`}></div>
 
-              <div className="glass-panel rounded-2xl p-4 relative overflow-hidden transition-all hover:shadow-md">
+              <div className="glass-panel rounded-2xl p-5 relative overflow-hidden transition-all hover:shadow-lg hover:-translate-y-1 active:scale-[0.98]">
                  {/* Decorative colored strip */}
-                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${config.color}`}></div>
+                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${config.color} opacity-80`}></div>
 
-                 <div className="flex justify-between items-start mb-2">
+                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center space-x-2">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded text-white ${config.color}`}>
                             L{log.intensity}
