@@ -47,18 +47,26 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level }) => {
        {/* Lighthouse Structure */}
        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex flex-col items-center">
           
-          {/* Light Beam */}
-          <div className="relative z-20">
+          {/* Light Beam System */}
+          <div className="absolute top-[18px] left-[-6px] z-30 pointer-events-none">
+             {/* Main Rotating Beam */}
              <div 
-               className="absolute top-[13px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[40px] border-r-[40px] border-b-[200px] border-l-transparent border-r-transparent origin-bottom-left transition-all duration-300"
+               className="absolute top-0 left-0 w-0 h-0 border-l-[30px] border-r-[30px] border-b-[250px] border-l-transparent border-r-transparent transition-all duration-300"
                style={{ 
                  borderBottomColor: beamColor,
-                 transform: level === IntensityLevel.Level1 ? 'rotate(0deg) scale(1.5)' : 'rotate(0deg)',
-                 animation: level === IntensityLevel.Level1 ? 'none' : 'beam-rotate 4s infinite ease-in-out alternate'
+                 transformOrigin: '50% 0%',
+                 transform: level === IntensityLevel.Level1 
+                   ? 'rotate(-45deg) scale(1.5)' 
+                   : 'rotate(-45deg)',
+                 animation: level === IntensityLevel.Level1 
+                   ? 'none' 
+                   : 'beam-rotate-from-corner 5s infinite ease-in-out alternate',
+                 filter: 'blur(4px)'
                }}
              ></div>
-             {/* The Bulb Glow */}
-             <div className={`w-8 h-8 rounded-full bg-yellow-100 blur-md absolute top-[11px] left-1/2 -translate-x-1/2 ${level === IntensityLevel.Level1 ? 'animate-ping bg-red-500' : ''}`}></div>
+             
+             {/* The Bulb Glow at the origin point */}
+             <div className={`w-4 h-4 rounded-full bg-yellow-100 blur-sm absolute -top-2 -left-2 ${level === IntensityLevel.Level1 ? 'animate-ping bg-red-500' : ''}`}></div>
           </div>
 
           {/* Roof */}
@@ -82,17 +90,6 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level }) => {
 
           {/* Base */}
           <div className="w-24 h-12 bg-slate-800 rounded-t-lg z-10 relative -mt-2"></div>
-          
-          {/* Bottom Left Beam (User Request) */}
-          <div className="absolute bottom-0 left-[-60px] w-[120px] h-[100px] pointer-events-none z-30 opacity-40 transition-opacity duration-1000"
-               style={{ opacity: level ? 0.4 : 0 }}>
-            <div className="w-full h-full" 
-                 style={{ 
-                   background: `conic-gradient(from 225deg at 0% 100%, ${beamColor} 0deg, transparent 45deg)`,
-                   filter: 'blur(8px)'
-                 }}>
-            </div>
-          </div>
        </div>
 
        {/* Ocean / Waves */}
