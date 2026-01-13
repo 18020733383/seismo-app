@@ -50,7 +50,7 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level }) => {
           {/* Light Beam */}
           <div className="relative z-20">
              <div 
-               className="absolute top-[13px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[40px] border-r-[40px] border-b-[200px] border-l-transparent border-r-transparent origin-top transition-all duration-300"
+               className="absolute top-[13px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[40px] border-r-[40px] border-b-[200px] border-l-transparent border-r-transparent origin-bottom-left transition-all duration-300"
                style={{ 
                  borderBottomColor: beamColor,
                  transform: level === IntensityLevel.Level1 ? 'rotate(0deg) scale(1.5)' : 'rotate(0deg)',
