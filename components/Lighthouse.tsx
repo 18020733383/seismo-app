@@ -82,6 +82,17 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level }) => {
 
           {/* Base */}
           <div className="w-24 h-12 bg-slate-800 rounded-t-lg z-10 relative -mt-2"></div>
+          
+          {/* Bottom Left Beam (User Request) */}
+          <div className="absolute bottom-0 left-[-60px] w-[120px] h-[100px] pointer-events-none z-30 opacity-40 transition-opacity duration-1000"
+               style={{ opacity: level ? 0.4 : 0 }}>
+            <div className="w-full h-full" 
+                 style={{ 
+                   background: `conic-gradient(from 225deg at 0% 100%, ${beamColor} 0deg, transparent 45deg)`,
+                   filter: 'blur(8px)'
+                 }}>
+            </div>
+          </div>
        </div>
 
        {/* Ocean / Waves */}

@@ -120,42 +120,91 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
         </div>
       </div>
 
-      {/* Timeline Sparkline */}
+      {/* Timeline Chart */}
       <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
         <h3 className="text-sm font-bold text-slate-700 mb-8 flex items-center gap-2">
           <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
           最近 7 天震感趋势
         </h3>
-        <div className="relative h-32 w-full flex items-end justify-between px-2">
+        
+        <div className="relative h-40 w-full px-2">
           {/* Grid Lines */}
-          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-            <div className="w-full border-t border-slate-100"></div>
-            <div className="w-full border-t border-slate-100"></div>
-            <div className="w-full border-t border-slate-100"></div>
+          <div className="absolute inset-0 flex flex-col justify-between py-4 pointer-events-none opacity-20">
+            <div className="w-full border-t border-slate-400"></div>
+            <div className="w-full border-t border-slate-400"></div>
+            <div className="w-full border-t border-slate-400"></div>
+            <div className="w-full border-t border-slate-400"></div>
           </div>
 
-          {timelineData.map((data, i) => {
-            const height = (data.count / maxTimelineCount) * 100;
-            return (
-              <div key={i} className="relative flex flex-col items-center group w-full">
+          {/* SVG Line and Area */}
+          <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            
+            {/* Area under the line */}
+            <path
+              d={`
+                M ${timelineData.map((d, i) => `${(i / (timelineData.length - 1)) * 100}% ${100 - (d.count / maxTimelineCount) * 100}%`).join(' L ')}
+                L 100% 100% L 0% 100% Z
+              `}
+              fill="url(#lineGradient)"
+              className="transition-all duration-1000 ease-out"
+            />
+            
+            {/* The actual line */}
+            <path
+              d={timelineData.map((d, i) => 
+                `${i === 0 ? 'M' : 'L'} ${(i / (timelineData.length - 1)) * 100}% ${100 - (d.count / maxTimelineCount) * 100}%`
+              ).join(' ')}
+              fill="none"
+              stroke="#6366f1"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-all duration-1000 ease-out drop-shadow-md"
+            />
+
+            {/* Data Points */}
+            {timelineData.map((d, i) => (
+              <circle
+                key={i}
+                cx={`${(i / (timelineData.length - 1)) * 100}%`}
+                cy={`${100 - (d.count / maxTimelineCount) * 100}%`}
+                r="4"
+                fill="white"
+                stroke="#6366f1"
+                strokeWidth="2"
+                className="transition-all duration-1000 ease-out"
+              />
+            ))}
+          </svg>
+
+          {/* Interaction Layer */}
+          <div className="absolute inset-0 flex justify-between px-2 py-4">
+            {timelineData.map((data, i) => (
+              <div key={i} className="relative h-full flex flex-col items-center group" style={{ width: `${100 / timelineData.length}%` }}>
                 {/* Tooltip */}
-                <div className="absolute -top-8 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 font-bold">
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 font-bold shadow-xl border border-white/10">
                   {data.count} 次震感
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
                 </div>
                 
-                {/* Bar */}
-                <div 
-                  className="w-4 bg-gradient-to-t from-blue-500 to-indigo-400 rounded-t-lg transition-all duration-1000 ease-out group-hover:from-blue-400 group-hover:to-indigo-300 shadow-lg shadow-indigo-200/50"
-                  style={{ height: `${Math.max(height, 5)}%` }}
-                ></div>
+                {/* Invisible hover area */}
+                <div className="absolute inset-0 w-full h-full cursor-pointer"></div>
                 
-                {/* Label */}
-                <span className="text-[9px] font-bold text-slate-400 mt-3 group-hover:text-slate-600 transition-colors">
-                  {data.label}
-                </span>
+                {/* Label (placed at bottom) */}
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
+                  <span className="text-[9px] font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">
+                    {data.label}
+                  </span>
+                </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
 
