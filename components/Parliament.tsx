@@ -35,7 +35,9 @@ export const Parliament: React.FC<ParliamentProps> = ({ logs }) => {
     return logs.filter(l => l.timestamp >= start && l.timestamp <= end);
   }, [logs]);
 
-  const metrics = useMemo(() => {
+  const { seats, rulingStrength, dopamineIndex, metrics } = useMemo(() => {
+    // Basic metrics
+    const total = recentLogs.length;
     const counts = {
       [IntensityLevel.Level1]: 0,
       [IntensityLevel.Level2]: 0,
@@ -44,130 +46,95 @@ export const Parliament: React.FC<ParliamentProps> = ({ logs }) => {
       [IntensityLevel.Level5]: 0,
       [IntensityLevel.Level6]: 0,
     };
+    let sumLevel = 0;
+    const tagsMap: Record<string, number> = {};
 
     recentLogs.forEach(l => {
       counts[l.intensity]++;
+      sumLevel += l.intensity;
+      (l.tags || []).forEach(t => tagsMap[t] = (tagsMap[t] || 0) + 1);
     });
 
-    const total = recentLogs.length || 1;
-    const weightedSum =
-      counts[IntensityLevel.Level1] * 6 +
-      counts[IntensityLevel.Level2] * 5 +
-      counts[IntensityLevel.Level3] * 4 +
-      counts[IntensityLevel.Level4] * 3 +
-      counts[IntensityLevel.Level5] * 2 +
-      counts[IntensityLevel.Level6] * 1;
-    const avgLevel = weightedSum / total;
+    const avgLevel = total > 0 ? sumLevel / total : 6;
+    const topTags = Object.entries(tagsMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-    const tagCounts: Record<string, number> = {};
-    recentLogs.forEach(l => {
-      (l.tags || []).forEach(t => {
-        tagCounts[t] = (tagCounts[t] || 0) + 1;
-      });
-    });
-
-    const topTags = Object.entries(tagCounts)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 10);
-
-    return { counts, total, avgLevel, topTags };
-  }, [recentLogs]);
-
-  const partyScores = useMemo(() => {
-    const score: Record<PartyKey, number> = {
-      indul: 0,
-      discipline: 0,
-      anxiety: 0,
-      stability: 0,
-      crisis: 0,
+    // Simple keyword mapping for local UI visualization only
+    const getKeywordWeight = (log: SeismicLog) => {
+      const text = (log.content + (log.tags || []).join('')).toLowerCase();
+      const weights = { indul: 0, discipline: 0, anxiety: 0, stability: 0, crisis: 0 };
+      
+      if (/玩|刷|吃|睡|懒|拖|欲|爽/.test(text)) weights.indul += 2;
+      if (/学|练|读|完|成|律|刻|苦/.test(text)) weights.discipline += 2;
+      if (/急|愁|怕|虑|死|考|试|会/.test(text)) weights.anxiety += 2;
+      if (log.intensity >= 5) weights.stability += 1;
+      if (log.intensity <= 2) weights.crisis += 2;
+      
+      return weights;
     };
 
-    recentLogs.forEach(l => {
-      const tags = l.tags || [];
-      tags.forEach(t => {
-        (Object.keys(PARTY_KEYS) as PartyKey[]).forEach(k => {
-          if (PARTY_KEYS[k].some(w => t.includes(w))) {
-            score[k] += 1;
-          }
-        });
-      });
+    const totalWeights = recentLogs.reduce((acc, log) => {
+      const w = getKeywordWeight(log);
+      acc.indul += w.indul;
+      acc.discipline += w.discipline;
+      acc.anxiety += w.anxiety;
+      acc.stability += w.stability;
+      acc.crisis += w.crisis;
+      return acc;
+    }, { indul: 0, discipline: 0, anxiety: 0, stability: 0, crisis: 0 });
 
-      if (l.intensity === IntensityLevel.Level1 || l.intensity === IntensityLevel.Level2 || l.intensity === IntensityLevel.Level3) {
-        score.anxiety += 2;
-      }
-      if (l.intensity === IntensityLevel.Level4) {
-        score.crisis += 1.5;
-      }
-      if (l.intensity === IntensityLevel.Level6) {
-        score.stability += 1.5;
-      }
-      if (l.intensity === IntensityLevel.Level5) {
-        score.indul += 1;
-      }
-    });
+    const totalW = (totalWeights.indul + totalWeights.discipline + totalWeights.anxiety + totalWeights.stability + totalWeights.crisis) || 1;
+    const seats = {
+      indul: Math.round((totalWeights.indul / totalW) * 100),
+      discipline: Math.round((totalWeights.discipline / totalW) * 100),
+      anxiety: Math.round((totalWeights.anxiety / totalW) * 100),
+      stability: Math.round((totalWeights.stability / totalW) * 100),
+      crisis: 100 - (Math.round((totalWeights.indul / totalW) * 100) + Math.round((totalWeights.discipline / totalW) * 100) + Math.round((totalWeights.anxiety / totalW) * 100) + Math.round((totalWeights.stability / totalW) * 100))
+    };
 
-    const base = 1;
-    (Object.keys(score) as PartyKey[]).forEach(k => {
-      score[k] += base;
-    });
-
-    return score;
-  }, [recentLogs]);
-
-  const seats = useMemo(() => {
-    const sum = (Object.values(partyScores).reduce((a, b) => a + b, 0)) || 1;
-    const floats = (Object.keys(partyScores) as PartyKey[]).map(k => ({ k, v: (partyScores[k] / sum) * 100 }));
-    const floors = floats.map(i => ({ k: i.k, v: Math.floor(i.v) }));
-    let used = floors.reduce((a, b) => a + b.v, 0);
-    const remain = 100 - used;
-    const remainders = floats.map(i => ({ k: i.k, r: i.v - Math.floor(i.v) })).sort((a, b) => b.r - a.r);
-    for (let i = 0; i < remain; i++) {
-      const k = remainders[i % remainders.length].k;
-      const idx = floors.findIndex(f => f.k === k);
-      floors[idx].v += 1;
-    }
-    const out: Record<PartyKey, number> = { indul: 0, discipline: 0, anxiety: 0, stability: 0, crisis: 0 };
-    floors.forEach(f => { out[f.k] = f.v; });
-    return out;
-  }, [partyScores]);
-
-  const dopamineIndex = useMemo(() => {
-    const indul = partyScores.indul;
-    const disc = partyScores.discipline;
-    const ratio = disc === 0 ? indul : indul / disc;
-    let status = '平衡';
-    if (ratio >= 1.4) status = '超发';
-    else if (ratio <= 0.7) status = '紧缩';
-    return { ratio: Number(ratio.toFixed(2)), status };
-  }, [partyScores]);
-
-  const rulingStrength = useMemo(() => {
-    const ruling = seats.discipline + seats.stability + seats.crisis;
+    const ruling = seats.discipline + seats.stability;
     const opposition = seats.indul + seats.anxiety;
     const diff = ruling - opposition;
-    let status = '弱势执政';
-    if (diff >= 10) status = '稳健执政';
-    else if (diff <= -10) status = '在野占优';
-    return { ruling, opposition, status, diff };
-  }, [seats]);
+    const status = diff > 20 ? '稳健扩张' : diff > 0 ? '微弱执政' : diff > -20 ? '陷入僵局' : '全面失控';
+
+    const ratio = seats.indul / (seats.discipline || 1);
+    const dopamine = ratio > 1.5 ? '严重通胀' : ratio > 0.8 ? '温和扩张' : ratio > 0.4 ? '紧缩周期' : '极度低迷';
+
+    return { 
+      seats, 
+      rulingStrength: { ruling, opposition, diff, status },
+      dopamineIndex: { ratio, status: dopamine },
+      metrics: { total, counts, avgLevel, topTags }
+    };
+  }, [recentLogs]);
 
   const prompt = useMemo(() => {
-    const parts = [
-      '角色设定：把一个人当成一个国家，脑子是最高决策机构。请基于最近事件给出“议会构成、运转状况、经济（多巴胺）状况”的判断与建议。',
-      `时间范围：最近 7 天，样本数=${metrics.total}`,
-      `震感强度分布：L1=${metrics.counts[IntensityLevel.Level1]}，L2=${metrics.counts[IntensityLevel.Level2]}，L3=${metrics.counts[IntensityLevel.Level3]}，L4=${metrics.counts[IntensityLevel.Level4]}，L5=${metrics.counts[IntensityLevel.Level5]}，L6=${metrics.counts[IntensityLevel.Level6]}，平均强度=${metrics.avgLevel.toFixed(2)}`,
-      `标签Top10：${metrics.topTags.map(([t, c]) => `#${t}(${c})`).join('、') || '无'}`,
-      `议会席位总数：100；构成：${PARTY_LABEL.indul}=${seats.indul}、${PARTY_LABEL.discipline}=${seats.discipline}、${PARTY_LABEL.anxiety}=${seats.anxiety}、${PARTY_LABEL.stability}=${seats.stability}、${PARTY_LABEL.crisis}=${seats.crisis}`,
-      `运转状况：${rulingStrength.status}（执政联盟=${rulingStrength.ruling}，在野联盟=${rulingStrength.opposition}，席位差=${rulingStrength.diff}）`,
-      `多巴胺经济：${dopamineIndex.status}（纵欲/自律比=${dopamineIndex.ratio}）`,
-      '输出要求：',
-      '1）用简洁结构化语言描述当前议会各派诉求与影响力；',
-      '2）评估最高决策机构是否被在野势力牵制；',
-      '3）给出 3 条当日可执行的治理建议（含自律与替代行为设计）；',
-      '4）用一句话给出今日总体运行结论。',
-    ];
-    return parts.join('\n');
-  }, [metrics, seats, rulingStrength, dopamineIndex]);
+    const sortedLogs = [...recentLogs].sort((a, b) => b.timestamp - a.timestamp);
+
+    const logDetails = sortedLogs.map(log => {
+      const config = LevelConfig[log.intensity];
+      const date = new Date(log.timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+      return `[${date}] 强度:${config.alertName}(L${log.intensity}) - 内容:${log.content}${log.tags?.length ? ` #标签:${log.tags.join(',')}` : ''}`;
+    }).join('\n');
+
+    return `你是一位卓越的国家治理专家与心理分析师。现在请执行以下分析指令：
+
+【核心设定】
+1. 将“人”视作一个主权国家。
+2. “大脑/意识”是该国家的最高决策机构（议会）。
+3. 心理震感（情绪波动）即为国家发生的社会/政治/自然事件。
+
+【分析对象：最近 7 天的震感记录】
+${logDetails || '（暂无记录）'}
+
+【任务要求】
+请基于上述记录，从以下维度深度总结当前国家的现状：
+1. **议会构成**：总席位 100 人。请根据事件的性质（如：纵欲、焦虑、自律、社交压力等）判断当前有哪些“党派”在议会中占据主导地位，并分配席位比例。
+2. **运转状况**：判断议会目前是处于高效决策期、政治僵局期、还是处于无政府状态？执政联盟（理智与长远利益）与在野党（短期诱惑与即时情绪）的博弈情况如何？
+3. **经济（多巴胺）状况**：分析多巴胺的货币政策。是否存在“多巴胺超发（过度纵欲导致的贬值）”？还是处于“多巴胺紧缩（极度压抑导致的动力不足）”？或者是稳健的平衡状态？
+4. **国家安全建议**：面对当前的“议会构成”，最高决策者应采取何种“行政手段”来优化国家运转？
+
+请用专业、犀利且极具社会科学感的文风进行深度分析。`;
+  }, [recentLogs]);
 
   const copyPrompt = async () => {
     try {
