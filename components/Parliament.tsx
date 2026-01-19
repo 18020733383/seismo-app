@@ -111,31 +111,32 @@ export const Parliament: React.FC<ParliamentProps> = ({ logs }) => {
     const sortedLogs = [...recentLogs].sort((a, b) => b.timestamp - a.timestamp);
 
     const logDetails = sortedLogs.map(log => {
-       const config = LevelConfig[log.intensity];
-       const date = new Date(log.timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
-       const tagsText = log.tags?.length ? ` #标签:${log.tags.join(',')}` : '';
-       const aftershockText = log.isAftershock ? ' [余震:代表历史事件的次生波]' : '';
-       return `[${date}] 强度:${config.alertName}(L${log.intensity})${aftershockText} - 内容:${log.content}${tagsText}`;
-     }).join('\n');
-
-    return `你是一位卓越的国家治理专家与心理分析师。现在请执行以下分析指令：
-
-【核心设定】
-1. 将“人”视作一个主权国家。
-2. “大脑/意识”是该国家的最高决策机构（议会）。
-3. 心理震感（情绪波动）即为国家发生的社会/政治/自然事件。
-
-【分析对象：最近 7 天的震感记录】
-${logDetails || '（暂无记录）'}
-
-【任务要求】
-请基于上述记录，从以下维度深度总结当前国家的现状：
-1. **议会构成**：总席位 100 人。请根据事件的性质（如：纵欲、焦虑、自律、社交压力等）判断当前有哪些“党派”在议会中占据主导地位，并分配席位比例。
-2. **运转状况**：判断议会目前是处于高效决策期、政治僵局期、还是处于无政府状态？执政联盟（理智与长远利益）与在野党（短期诱惑与即时情绪）的博弈情况如何？
-3. **经济（多巴胺）状况**：分析多巴胺的货币政策。是否存在“多巴胺超发（过度纵欲导致的贬值）”？还是处于“多巴胺紧缩（极度压抑导致的动力不足）”？或者是稳健的平衡状态？
-4. **国家安全建议**：面对当前的“议会构成”，最高决策者应采取何种“行政手段”来优化国家运转？
-
-请用专业、犀利且极具社会科学感的文风进行深度分析。`;
+        const config = LevelConfig[log.intensity];
+        const date = new Date(log.timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+        const tagsText = log.tags?.length ? ` #标签:${log.tags.join(',')}` : '';
+        const aftershockText = log.isAftershock ? ' [余震]' : '';
+        return `[${date}] 强度:${config.alertName}(L${log.intensity})${aftershockText} - 内容:${log.content}${tagsText}`;
+      }).join('\n');
+ 
+      return `你是一位卓越的国家治理专家与心理分析师。现在请执行以下分析指令：
+ 
+ 【核心设定】
+ 1. 将“人”视作一个主权国家。
+ 2. “大脑/意识”是该国家的最高决策机构（议会）。
+ 3. 心理震感（情绪波动）即为国家发生的社会/政治/自然事件。
+ 4. 【术语说明】“余震”代表历史核心事件的次生波、长尾影响或情绪回潮，不应视作独立的新议题。
+ 
+ 【分析对象：最近 7 天的震感记录】
+ ${logDetails || '（暂无记录）'}
+ 
+ 【任务要求】
+ 请基于上述记录，从以下维度深度总结当前国家的现状：
+ 1. **议会构成**：总席位 100 人。请根据事件的性质（如：纵欲、焦虑、自律、社交压力等）判断当前有哪些“党派”在议会中占据主导地位，并分配席位比例。
+ 2. **运转状况**：判断议会目前是处于高效决策期、政治僵局期、还是处于无政府状态？执政联盟（理智与长远利益）与在野党（短期诱惑与即时情绪）的博弈情况如何？
+ 3. **经济（多巴胺）状况**：分析多巴胺的货币政策。是否存在“多巴胺超发（过度纵欲导致的贬值）”？还是处于“多巴胺紧缩（极度压抑导致的动力不足）”？或者是稳健的平衡状态？
+ 4. **国家安全建议**：面对当前的“议会构成”，最高决策者应采取何种“行政手段”来优化国家运转？
+ 
+ 请用专业、犀利且极具社会科学感的文风进行深度分析。`;
   }, [recentLogs]);
 
   const copyPrompt = async () => {
