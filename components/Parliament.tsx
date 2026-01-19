@@ -111,10 +111,12 @@ export const Parliament: React.FC<ParliamentProps> = ({ logs }) => {
     const sortedLogs = [...recentLogs].sort((a, b) => b.timestamp - a.timestamp);
 
     const logDetails = sortedLogs.map(log => {
-      const config = LevelConfig[log.intensity];
-      const date = new Date(log.timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
-      return `[${date}] 强度:${config.alertName}(L${log.intensity}) - 内容:${log.content}${log.tags?.length ? ` #标签:${log.tags.join(',')}` : ''}`;
-    }).join('\n');
+       const config = LevelConfig[log.intensity];
+       const date = new Date(log.timestamp).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' });
+       const tagsText = log.tags?.length ? ` #标签:${log.tags.join(',')}` : '';
+       const aftershockText = log.isAftershock ? ' [余震:代表历史事件的次生波]' : '';
+       return `[${date}] 强度:${config.alertName}(L${log.intensity})${aftershockText} - 内容:${log.content}${tagsText}`;
+     }).join('\n');
 
     return `你是一位卓越的国家治理专家与心理分析师。现在请执行以下分析指令：
 
