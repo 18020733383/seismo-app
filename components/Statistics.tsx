@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { SeismicLog, IntensityLevel, LevelConfig } from '../types';
 
 interface StatisticsProps {
   logs: SeismicLog[];
 }
 
+type RangeType = 3 | 7 | 30 | 365;
+
 export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
+  const [range, setRange] = useState<RangeType>(7);
+
   // 1. Data Processing
   const totalCount = logs.length;
   const levelCounts: Record<IntensityLevel, number> = {
@@ -23,30 +27,45 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
 
   const maxCount = Math.max(...Object.values(levelCounts), 1);
 
-  // 2. Timeline Processing (Last 7 days)
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
+  // 2. Timeline Processing
+  const { timelineData, intensityData } = useMemo(() => {
+    const days = Array.from({ length: range }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (range - 1 - i));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    });
 
-  const timelineData = last7Days.map(date => {
-    const nextDate = new Date(date);
-    nextDate.setDate(date.getDate() + 1);
-    
-    const count = logs.filter(log => {
-      const logDate = log.timestamp;
-      return logDate >= date.getTime() && logDate < nextDate.getTime();
-    }).length;
+    const tData = days.map(date => {
+      const nextDate = new Date(date);
+      nextDate.setDate(date.getDate() + 1);
+      
+      const dayLogs = logs.filter(log => {
+        const logDate = log.timestamp;
+        return logDate >= date.getTime() && logDate < nextDate.getTime();
+      });
 
-    return {
-      label: date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
-      count
+      // 强度权重统计: L6(1), L5(2), L4(3), L3(4), L2(5), L1(6)
+      // 计算方式: 7 - intensity
+      const intensitySum = dayLogs.reduce((sum, log) => sum + (7 - log.intensity), 0);
+
+      return {
+        label: range > 31 
+          ? date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
+          : date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
+        count: dayLogs.length,
+        intensitySum
+      };
+    });
+
+    return { 
+      timelineData: tData,
+      intensityData: tData 
     };
-  });
+  }, [logs, range]);
 
   const maxTimelineCount = Math.max(...timelineData.map(d => d.count), 1);
+  const maxIntensitySum = Math.max(...timelineData.map(d => d.intensitySum), 1);
 
   // 3. Tag Distribution Processing
   const tagCounts: Record<string, number> = {};
@@ -86,10 +105,27 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
 
       {/* Distribution Bar Chart */}
       <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
-        <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
-          <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
-          震感强度分布
-        </h3>
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+            <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
+            震感强度分布
+          </h3>
+          <div className="flex bg-slate-100/50 p-1 rounded-xl border border-slate-200/50">
+            {([3, 7, 30, 365] as RangeType[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
+                  range === r 
+                    ? 'bg-white text-blue-600 shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {r === 365 ? '1年' : r === 30 ? '1月' : `${r}天`}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="space-y-4">
           {[
             IntensityLevel.Level1, IntensityLevel.Level2, IntensityLevel.Level3, 
@@ -124,16 +160,13 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
         <h3 className="text-sm font-bold text-slate-700 mb-8 flex items-center gap-2">
           <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
-          最近 7 天震感趋势
+          震感频次趋势 (近 {range === 365 ? '1年' : range === 30 ? '1月' : `${range}天`})
         </h3>
         
         <div className="relative h-40 w-full px-2">
           {/* Grid Lines */}
           <div className="absolute inset-0 flex flex-col justify-between py-4 pointer-events-none opacity-20">
-            <div className="w-full border-t border-slate-400"></div>
-            <div className="w-full border-t border-slate-400"></div>
-            <div className="w-full border-t border-slate-400"></div>
-            <div className="w-full border-t border-slate-400"></div>
+            {[0, 1, 2, 3].map(i => <div key={i} className="w-full border-t border-slate-400"></div>)}
           </div>
 
           {/* SVG Line and Area */}
@@ -148,17 +181,21 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             {/* Area under the line */}
             <path
               d={`
-                M ${timelineData.map((d, i) => `${(i / (timelineData.length - 1)) * 100}% ${100 - (d.count / maxTimelineCount) * 100}%`).join(' L ')}
-                L 100% 100% L 0% 100% Z
+                M 0 ${100 - (timelineData[0].count / maxTimelineCount) * 100}
+                ${timelineData.map((d, i) => `L ${(i / (timelineData.length - 1)) * 100} ${100 - (d.count / maxTimelineCount) * 100}`).join(' ')}
+                L 100 100 L 0 100 Z
               `}
               fill="url(#lineGradient)"
               className="transition-all duration-1000 ease-out"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              vectorEffect="non-scaling-stroke"
             />
             
             {/* The actual line */}
             <path
               d={timelineData.map((d, i) => 
-                `${i === 0 ? 'M' : 'L'} ${(i / (timelineData.length - 1)) * 100}% ${100 - (d.count / maxTimelineCount) * 100}%`
+                `${i === 0 ? 'M' : 'L'} ${(i / (timelineData.length - 1)) * 100} ${100 - (d.count / maxTimelineCount) * 100}`
               ).join(' ')}
               fill="none"
               stroke="#6366f1"
@@ -166,10 +203,11 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               strokeLinecap="round"
               strokeLinejoin="round"
               className="transition-all duration-1000 ease-out drop-shadow-md"
+              vectorEffect="non-scaling-stroke"
             />
 
-            {/* Data Points */}
-            {timelineData.map((d, i) => (
+            {/* Data Points (Only show for smaller ranges to avoid clutter) */}
+            {range <= 31 && timelineData.map((d, i) => (
               <circle
                 key={i}
                 cx={`${(i / (timelineData.length - 1)) * 100}%`}
@@ -189,16 +227,96 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               <div key={i} className="relative h-full flex flex-col items-center group" style={{ width: `${100 / timelineData.length}%` }}>
                 {/* Tooltip */}
                 <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 font-bold shadow-xl border border-white/10">
-                  {data.count} 次震感
+                  {data.count} 次震感 ({data.label})
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
                 </div>
                 
-                {/* Invisible hover area */}
                 <div className="absolute inset-0 w-full h-full cursor-pointer"></div>
                 
-                {/* Label (placed at bottom) */}
+                {/* Label - Only show some for large ranges */}
                 <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
-                  <span className="text-[9px] font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">
+                  <span className={`text-[9px] font-bold text-slate-400 group-hover:text-indigo-600 transition-colors ${
+                    range > 7 && i % Math.ceil(range/7) !== 0 ? 'hidden' : ''
+                  }`}>
+                    {data.label}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Intensity Sum Chart */}
+      <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
+        <h3 className="text-sm font-bold text-slate-700 mb-8 flex items-center gap-2">
+          <div className="w-1.5 h-4 bg-rose-500 rounded-full"></div>
+          地震强度趋势 (加权总和)
+        </h3>
+        
+        <div className="relative h-40 w-full px-2">
+          <div className="absolute inset-0 flex flex-col justify-between py-4 pointer-events-none opacity-20">
+            {[0, 1, 2, 3].map(i => <div key={i} className="w-full border-t border-slate-400"></div>)}
+          </div>
+
+          <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="intensityGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            
+            <path
+              d={`
+                M 0 ${100 - (timelineData[0].intensitySum / maxIntensitySum) * 100}
+                ${timelineData.map((d, i) => `L ${(i / (timelineData.length - 1)) * 100} ${100 - (d.intensitySum / maxIntensitySum) * 100}`).join(' ')}
+                L 100 100 L 0 100 Z
+              `}
+              fill="url(#intensityGradient)"
+              className="transition-all duration-1000 ease-out"
+            />
+            
+            <path
+              d={timelineData.map((d, i) => 
+                `${i === 0 ? 'M' : 'L'} ${(i / (timelineData.length - 1)) * 100} ${100 - (d.intensitySum / maxIntensitySum) * 100}`
+              ).join(' ')}
+              fill="none"
+              stroke="#f43f5e"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-all duration-1000 ease-out drop-shadow-md"
+            />
+
+            {range <= 31 && timelineData.map((d, i) => (
+              <circle
+                key={i}
+                cx={`${(i / (timelineData.length - 1)) * 100}%`}
+                cy={`${100 - (d.intensitySum / maxIntensitySum) * 100}%`}
+                r="4"
+                fill="white"
+                stroke="#f43f5e"
+                strokeWidth="2"
+                className="transition-all duration-1000 ease-out"
+              />
+            ))}
+          </svg>
+
+          <div className="absolute inset-0 flex justify-between px-2 py-4">
+            {timelineData.map((data, i) => (
+              <div key={i} className="relative h-full flex flex-col items-center group" style={{ width: `${100 / timelineData.length}%` }}>
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 font-bold shadow-xl border border-white/10">
+                  强度值: {data.intensitySum} ({data.label})
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
+                </div>
+                
+                <div className="absolute inset-0 w-full h-full cursor-pointer"></div>
+                
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
+                  <span className={`text-[9px] font-bold text-slate-400 group-hover:text-rose-600 transition-colors ${
+                    range > 7 && i % Math.ceil(range/7) !== 0 ? 'hidden' : ''
+                  }`}>
                     {data.label}
                   </span>
                 </div>
