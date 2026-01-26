@@ -170,7 +170,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           </div>
 
           {/* SVG Line and Area */}
-          <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" preserveAspectRatio="none">
+          <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
@@ -187,8 +187,6 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               `}
               fill="url(#lineGradient)"
               className="transition-all duration-1000 ease-out"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
               vectorEffect="non-scaling-stroke"
             />
             
@@ -210,13 +208,14 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             {range <= 31 && timelineData.map((d, i) => (
               <circle
                 key={i}
-                cx={`${(i / (timelineData.length - 1)) * 100}%`}
-                cy={`${100 - (d.count / maxTimelineCount) * 100}%`}
-                r="4"
+                cx={(i / (timelineData.length - 1)) * 100}
+                cy={100 - (d.count / maxTimelineCount) * 100}
+                r="1.5"
                 fill="white"
                 stroke="#6366f1"
-                strokeWidth="2"
+                strokeWidth="0.8"
                 className="transition-all duration-1000 ease-out"
+                vectorEffect="non-scaling-stroke"
               />
             ))}
           </svg>
@@ -259,7 +258,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             {[0, 1, 2, 3].map(i => <div key={i} className="w-full border-t border-slate-400"></div>)}
           </div>
 
-          <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" preserveAspectRatio="none">
+          <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <linearGradient id="intensityGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.3" />
@@ -275,6 +274,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               `}
               fill="url(#intensityGradient)"
               className="transition-all duration-1000 ease-out"
+              vectorEffect="non-scaling-stroke"
             />
             
             <path
@@ -287,18 +287,20 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               strokeLinecap="round"
               strokeLinejoin="round"
               className="transition-all duration-1000 ease-out drop-shadow-md"
+              vectorEffect="non-scaling-stroke"
             />
 
             {range <= 31 && timelineData.map((d, i) => (
               <circle
                 key={i}
-                cx={`${(i / (timelineData.length - 1)) * 100}%`}
-                cy={`${100 - (d.intensitySum / maxIntensitySum) * 100}%`}
-                r="4"
+                cx={(i / (timelineData.length - 1)) * 100}
+                cy={100 - (d.intensitySum / maxIntensitySum) * 100}
+                r="1.5"
                 fill="white"
                 stroke="#f43f5e"
-                strokeWidth="2"
+                strokeWidth="0.8"
                 className="transition-all duration-1000 ease-out"
+                vectorEffect="non-scaling-stroke"
               />
             ))}
           </svg>
