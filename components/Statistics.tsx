@@ -169,7 +169,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             {[0, 1, 2, 3].map(i => <div key={i} className="w-full border-t border-slate-400"></div>)}
           </div>
 
-          {/* SVG Line and Area */}
+          {/* SVG Line and Area (Stretched) */}
           <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
@@ -178,7 +178,6 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               </linearGradient>
             </defs>
             
-            {/* Area under the line */}
             <path
               d={`
                 M 0 ${100 - (timelineData[0].count / maxTimelineCount) * 100}
@@ -190,7 +189,6 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               vectorEffect="non-scaling-stroke"
             />
             
-            {/* The actual line */}
             <path
               d={timelineData.map((d, i) => 
                 `${i === 0 ? 'M' : 'L'} ${(i / (timelineData.length - 1)) * 100} ${100 - (d.count / maxTimelineCount) * 100}`
@@ -203,19 +201,20 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               className="transition-all duration-1000 ease-out drop-shadow-md"
               vectorEffect="non-scaling-stroke"
             />
+          </svg>
 
-            {/* Data Points (Only show for smaller ranges to avoid clutter) */}
+          {/* SVG Data Points (Not Stretched) */}
+          <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible pointer-events-none">
             {range <= 31 && timelineData.map((d, i) => (
               <circle
                 key={i}
-                cx={(i / (timelineData.length - 1)) * 100}
-                cy={100 - (d.count / maxTimelineCount) * 100}
-                r="1.5"
+                cx={`${(i / (timelineData.length - 1)) * 100}%`}
+                cy={`${100 - (d.count / maxTimelineCount) * 100}%`}
+                r="4"
                 fill="white"
                 stroke="#6366f1"
-                strokeWidth="0.8"
+                strokeWidth="2"
                 className="transition-all duration-1000 ease-out"
-                vectorEffect="non-scaling-stroke"
               />
             ))}
           </svg>
@@ -258,6 +257,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             {[0, 1, 2, 3].map(i => <div key={i} className="w-full border-t border-slate-400"></div>)}
           </div>
 
+          {/* SVG Line and Area (Stretched) */}
           <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <linearGradient id="intensityGradient" x1="0" y1="0" x2="0" y2="1">
@@ -289,18 +289,20 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               className="transition-all duration-1000 ease-out drop-shadow-md"
               vectorEffect="non-scaling-stroke"
             />
+          </svg>
 
+          {/* SVG Data Points (Not Stretched) */}
+          <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible pointer-events-none">
             {range <= 31 && timelineData.map((d, i) => (
               <circle
                 key={i}
-                cx={(i / (timelineData.length - 1)) * 100}
-                cy={100 - (d.intensitySum / maxIntensitySum) * 100}
-                r="1.5"
+                cx={`${(i / (timelineData.length - 1)) * 100}%`}
+                cy={`${100 - (d.intensitySum / maxIntensitySum) * 100}%`}
+                r="4"
                 fill="white"
                 stroke="#f43f5e"
-                strokeWidth="0.8"
+                strokeWidth="2"
                 className="transition-all duration-1000 ease-out"
-                vectorEffect="non-scaling-stroke"
               />
             ))}
           </svg>
