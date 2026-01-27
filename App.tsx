@@ -3,7 +3,7 @@ import { Lighthouse } from './components/Lighthouse';
 import { ControlPanel } from './components/ControlPanel';
 import { EarthquakeLogInput } from './components/EarthquakeLogInput';
 import { HistoryList } from './components/HistoryList';
-import { IntensityLevel, SeismicLog, LevelConfig, LogType } from './types';
+import { IntensityLevel, SeismicLog, LevelConfig, PositiveLevelConfig, LogType } from './types';
 import { Statistics } from './components/Statistics';
 import { Parliament } from './components/Parliament';
 import Settings from './components/Settings';
@@ -65,7 +65,6 @@ function App() {
 
   const handleLevelSelect = (level: IntensityLevel) => {
     setCurrentLevel(level);
-    setCurrentLogType('negative'); // Default to negative
     setIsInputting(true);
     
     // Scroll to input if needed, simple implementation
@@ -127,7 +126,7 @@ function App() {
 
   // Determine dynamic background gradient based on current level
   const bgGradient = currentLevel 
-    ? LevelConfig[currentLevel].bgGradient 
+    ? (currentLogType === 'positive' ? PositiveLevelConfig[currentLevel].bgGradient : LevelConfig[currentLevel].bgGradient)
     : 'from-blue-200 to-white';
 
   return (
@@ -176,10 +175,43 @@ function App() {
           ) : (
             <div className="px-4">
               {activeTab === 'home' ? (
-                <ControlPanel 
-                  onSelectLevel={handleLevelSelect} 
-                  selectedLevel={currentLevel} 
-                />
+                <div className="flex flex-col gap-4">
+                  {/* Global Type Toggle */}
+                  {!isInputting && (
+                    <div className="flex justify-center mt-4 px-4">
+                      <div className="bg-white/40 backdrop-blur-md p-1.5 rounded-2xl flex gap-1.5 shadow-xl border border-white/50 w-full max-w-sm">
+                        <button
+                          onClick={() => setCurrentLogType('negative')}
+                          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all duration-300 ${
+                            currentLogType === 'negative' 
+                              ? 'bg-white text-rose-600 shadow-lg ring-1 ring-black/5 scale-[1.02]' 
+                              : 'text-slate-500 hover:text-slate-700 hover:bg-white/20'
+                          }`}
+                        >
+                          <span className="text-lg">📉</span>
+                          <span>震感记录</span>
+                        </button>
+                        <button
+                          onClick={() => setCurrentLogType('positive')}
+                          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all duration-300 ${
+                            currentLogType === 'positive' 
+                              ? 'bg-white text-emerald-600 shadow-lg ring-1 ring-black/5 scale-[1.02]' 
+                              : 'text-slate-500 hover:text-slate-700 hover:bg-white/20'
+                          }`}
+                        >
+                          <span className="text-lg">🏗️</span>
+                          <span>建设记录</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <ControlPanel 
+                    onSelectLevel={handleLevelSelect} 
+                    selectedLevel={currentLevel}
+                    logType={currentLogType}
+                  />
+                </div>
               ) : activeTab === 'logs' ? (
                 <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <h2 className="text-xl font-bold text-slate-800 mb-4 px-2">观测日志</h2>

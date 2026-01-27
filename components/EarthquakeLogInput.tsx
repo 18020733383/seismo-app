@@ -52,39 +52,11 @@ export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel,
       <div className={`rounded-3xl p-6 shadow-2xl border-2 ${config.borderColor} bg-white relative overflow-hidden`}>
         
         {/* Warning Tape for Level 1 & 2 */}
-        {(level === IntensityLevel.Level1 || level === IntensityLevel.Level2) && (
+        {(level === IntensityLevel.Level1 || level === IntensityLevel.Level2) && logType === 'negative' && (
             <div className={`absolute top-0 left-0 w-full h-2 ${level === IntensityLevel.Level1 ? 'bg-red-600 animate-pulse' : 'bg-orange-600'} `}></div>
         )}
 
-        {/* Type Toggle */}
-        <div className="flex justify-center mb-6">
-          <div className="bg-slate-100 p-1 rounded-xl flex gap-1 shadow-inner">
-            <button
-              type="button"
-              onClick={() => setLogType('negative')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                logType === 'negative' 
-                  ? 'bg-white text-red-600 shadow-sm ring-1 ring-black/5' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              📉 震感记录 (Seismic)
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogType('positive')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                logType === 'positive' 
-                  ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-black/5' 
-                  : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              🏗️ 建设记录 (Build)
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 mt-2">
             <div>
                 <h3 className={`font-black text-xl flex items-center gap-2 ${config.textColor}`}>
                   {config.label}
@@ -205,7 +177,7 @@ export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel,
               disabled={!content.trim()}
               className={`flex-1 py-3 rounded-xl text-white font-bold shadow-lg transition-transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${config.color}`}
             >
-              记录震感 (Log)
+              {logType === 'positive' ? '确认建设 (Build)' : '记录震感 (Log)'}
             </button>
           </div>
         </form>

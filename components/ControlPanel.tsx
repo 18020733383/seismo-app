@@ -1,12 +1,13 @@
 import React from 'react';
-import { IntensityLevel, LevelConfig } from '../types';
+import { IntensityLevel, LevelConfig, PositiveLevelConfig, LogType } from '../types';
 
 interface ControlPanelProps {
   onSelectLevel: (level: IntensityLevel) => void;
   selectedLevel: IntensityLevel | null;
+  logType: LogType;
 }
 
-export const ControlPanel: React.FC<ControlPanelProps> = ({ onSelectLevel, selectedLevel }) => {
+export const ControlPanel: React.FC<ControlPanelProps> = ({ onSelectLevel, selectedLevel, logType }) => {
   const levels = [
     IntensityLevel.Level1, IntensityLevel.Level2,
     IntensityLevel.Level3, IntensityLevel.Level4,
@@ -17,12 +18,14 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ onSelectLevel, selec
     <div className="w-full max-w-md mx-auto p-4 z-30 relative -mt-8">
       <div className="glass-panel rounded-3xl p-6 shadow-xl">
         <h2 className="text-center text-gray-700 font-bold mb-6 flex flex-col items-center">
-          <span className="text-lg">记录当前震感</span>
-          <span className="text-[10px] opacity-40 uppercase tracking-widest mt-1">Current Seismic Activity</span>
+          <span className="text-lg">{logType === 'positive' ? '新增建设记录' : '记录当前震感'}</span>
+          <span className="text-[10px] opacity-40 uppercase tracking-widest mt-1">
+            {logType === 'positive' ? 'New Construction Progress' : 'Current Seismic Activity'}
+          </span>
         </h2>
         <div className="grid grid-cols-2 gap-3">
           {levels.map((level) => {
-            const config = LevelConfig[level];
+            const config = logType === 'positive' ? PositiveLevelConfig[level] : LevelConfig[level];
             const isSelected = selectedLevel === level;
             
             return (
