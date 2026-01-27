@@ -3,7 +3,7 @@ import { Lighthouse } from './components/Lighthouse';
 import { ControlPanel } from './components/ControlPanel';
 import { EarthquakeLogInput } from './components/EarthquakeLogInput';
 import { HistoryList } from './components/HistoryList';
-import { IntensityLevel, SeismicLog, LevelConfig } from './types';
+import { IntensityLevel, SeismicLog, LevelConfig, LogType } from './types';
 import { Statistics } from './components/Statistics';
 import { Parliament } from './components/Parliament';
 import Settings from './components/Settings';
@@ -14,6 +14,7 @@ const generateId = () => Math.random().toString(36).substr(2, 9);
 function App() {
   const [logs, setLogs] = useState<SeismicLog[]>([]);
   const [currentLevel, setCurrentLevel] = useState<IntensityLevel | null>(null);
+  const [currentLogType, setCurrentLogType] = useState<LogType>('negative');
   const [isInputting, setIsInputting] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'logs' | 'stats' | 'parliament' | 'settings'>('home');
   const [isLoading, setIsLoading] = useState(true);
@@ -64,6 +65,7 @@ function App() {
 
   const handleLevelSelect = (level: IntensityLevel) => {
     setCurrentLevel(level);
+    setCurrentLogType('negative'); // Default to negative
     setIsInputting(true);
     
     // Scroll to input if needed, simple implementation
@@ -72,7 +74,7 @@ function App() {
     }, 100);
   };
 
-  const handleLogSubmit = async (content: string, isAftershock: boolean, tags: string[]) => {
+  const handleLogSubmit = async (content: string, isAftershock: boolean, tags: string[], type: 'negative' | 'positive') => {
     if (!currentLevel) return;
 
     const newLog: SeismicLog = {
@@ -82,6 +84,7 @@ function App() {
       isAftershock,
       timestamp: Date.now(),
       tags,
+      type,
     };
 
     // Optimistic update
@@ -145,10 +148,10 @@ function App() {
       <div className={`max-w-md mx-auto min-h-screen relative flex flex-col shadow-2xl overflow-hidden bg-gradient-to-b ${bgGradient} transition-all duration-1000`}>
         
         {/* Header / Lighthouse Area */}
-        <header className="relative z-10">
-           <Lighthouse level={currentLevel} />
-           
-           <div className="absolute top-6 left-6 z-20">
+      <header className="relative z-10">
+         <Lighthouse level={currentLevel} type={currentLogType} />
+         
+         <div className="absolute top-6 left-6 z-20">
               <h1 className={`text-2xl font-black tracking-tight ${currentLevel === IntensityLevel.Level1 ? 'text-red-500' : 'text-slate-800'}`}>
                 Seismo-Mind
               </h1>
@@ -167,6 +170,8 @@ function App() {
                 onSubmit={handleLogSubmit} 
                 onCancel={handleCancel}
                 existingTags={Array.from(new Set(logs.flatMap(log => log.tags || [])))}
+                logType={currentLogType}
+                setLogType={setCurrentLogType}
             />
           ) : (
             <div className="px-4">

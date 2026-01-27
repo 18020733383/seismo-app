@@ -16,7 +16,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return {
         ...row,
         isAftershock: !!row.isAftershock,
-        tags: tagsStr ? JSON.parse(tagsStr) : []
+        tags: tagsStr ? JSON.parse(tagsStr) : [],
+        type: row.type || 'negative'
       };
     });
 
@@ -37,9 +38,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const log = await context.request.json() as any;
     
     await DB.prepare(
-      "INSERT INTO logs (id, intensity, content, isAftershock, timestamp, tags) VALUES (?, ?, ?, ?, ?, ?)"
+      "INSERT INTO logs (id, intensity, content, isAftershock, timestamp, tags, type) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
-      .bind(log.id, log.intensity, log.content, log.isAftershock ? 1 : 0, log.timestamp, JSON.stringify(log.tags || []))
+      .bind(
+        log.id, 
+        log.intensity, 
+        log.content, 
+        log.isAftershock ? 1 : 0, 
+        log.timestamp, 
+        JSON.stringify(log.tags || []),
+        log.type || 'negative'
+      )
       .run();
 
     return new Response(JSON.stringify({ success: true }), {

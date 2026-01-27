@@ -3,5 +3,7 @@ CREATE TABLE IF NOT EXISTS logs (
   intensity REAL NOT NULL,
   content TEXT,
   isAftershock INTEGER DEFAULT 0,
-  timestamp INTEGER NOT NULL
+  timestamp INTEGER NOT NULL,
+  tags TEXT,
+  type TEXT DEFAULT 'negative'
 );

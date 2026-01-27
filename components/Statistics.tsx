@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { SeismicLog, IntensityLevel, LevelConfig } from '../types';
+import { SeismicLog, IntensityLevel, LevelConfig, PositiveLevelConfig, LogType } from '../types';
 
 interface StatisticsProps {
   logs: SeismicLog[];
@@ -9,9 +9,14 @@ type RangeType = 3 | 7 | 30 | 365;
 
 export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
   const [range, setRange] = useState<RangeType>(7);
+  const [statsType, setStatsType] = useState<LogType>('negative');
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => (log.type || 'negative') === statsType);
+  }, [logs, statsType]);
 
   // 1. Data Processing
-  const totalCount = logs.length;
+  const totalCount = filteredLogs.length;
   const levelCounts: Record<IntensityLevel, number> = {
     [IntensityLevel.Level1]: 0,
     [IntensityLevel.Level2]: 0,
@@ -21,7 +26,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
     [IntensityLevel.Level6]: 0,
   };
 
-  logs.forEach(log => {
+  filteredLogs.forEach(log => {
     levelCounts[log.intensity]++;
   });
 
@@ -40,7 +45,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       const nextDate = new Date(date);
       nextDate.setDate(date.getDate() + 1);
       
-      const dayLogs = logs.filter(log => {
+      const dayLogs = filteredLogs.filter(log => {
         const logDate = log.timestamp;
         return logDate >= date.getTime() && logDate < nextDate.getTime();
       });
@@ -62,14 +67,14 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       timelineData: tData,
       intensityData: tData 
     };
-  }, [logs, range]);
+  }, [filteredLogs, range]);
 
   const maxTimelineCount = Math.max(...timelineData.map(d => d.count), 1);
   const maxIntensitySum = Math.max(...timelineData.map(d => d.intensitySum), 1);
 
   // 3. Tag Distribution Processing
   const tagCounts: Record<string, number> = {};
-  logs.forEach(log => {
+  filteredLogs.forEach(log => {
     (log.tags || []).forEach(tag => {
       tagCounts[tag] = (tagCounts[tag] || 0) + 1;
     });
@@ -81,21 +86,58 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
 
   const maxTagCount = Math.max(...Object.values(tagCounts), 1);
 
+  // Helper for colors
+  const isPositive = statsType === 'positive';
+  const activeColor = isPositive ? 'bg-emerald-500' : 'bg-blue-500';
+  const activeTextColor = isPositive ? 'text-emerald-600' : 'text-blue-600';
+  const barColor = isPositive ? 'bg-emerald-400' : 'bg-blue-400';
+
   return (
     <div className="space-y-6 pb-10">
+      
+      {/* Type Toggle */}
+      <div className="flex justify-center mb-2">
+        <div className="bg-slate-100 p-1 rounded-xl flex gap-1 shadow-inner">
+          <button
+            onClick={() => setStatsType('negative')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              statsType === 'negative' 
+                ? 'bg-white text-red-600 shadow-sm ring-1 ring-black/5' 
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            📉 震感 (Seismic)
+          </button>
+          <button
+            onClick={() => setStatsType('positive')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              statsType === 'positive' 
+                ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-black/5' 
+                : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            🏗️ 建设 (Build)
+          </button>
+        </div>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4 px-2">
         <div className="glass-panel p-5 rounded-3xl shadow-lg border border-white/50 bg-white/40">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">震感总量</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
+            {isPositive ? '建设总量' : '震感总量'}
+          </p>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black text-slate-800">{totalCount}</span>
             <span className="text-xs text-slate-400 font-medium">次记录</span>
           </div>
         </div>
         <div className="glass-panel p-5 rounded-3xl shadow-lg border border-white/50 bg-white/40">
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">活跃程度</p>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
+            {isPositive ? '建设热度' : '活跃程度'}
+          </p>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-black text-blue-600">
+            <span className={`text-3xl font-black ${activeTextColor}`}>
               {(totalCount / Math.max(logs.length > 0 ? (Date.now() - logs[logs.length-1].timestamp) / (1000*60*60*24) : 1, 1)).toFixed(1)}
             </span>
             <span className="text-xs text-slate-400 font-medium">次/天</span>
@@ -107,8 +149,8 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-            <div className="w-1.5 h-4 bg-blue-500 rounded-full"></div>
-            震感强度分布
+            <div className={`w-1.5 h-4 ${activeColor} rounded-full`}></div>
+            {isPositive ? '建设等级分布' : '震感强度分布'}
           </h3>
           <div className="flex bg-slate-100/50 p-1 rounded-xl border border-slate-200/50">
             {([3, 7, 30, 365] as RangeType[]).map((r) => (
@@ -117,7 +159,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                 onClick={() => setRange(r)}
                 className={`px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
                   range === r 
-                    ? 'bg-white text-blue-600 shadow-sm' 
+                    ? `bg-white ${activeTextColor} shadow-sm` 
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
@@ -132,7 +174,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             IntensityLevel.Level4, IntensityLevel.Level5, IntensityLevel.Level6
           ].map(level => {
             const count = levelCounts[level];
-            const config = LevelConfig[level];
+            const config = isPositive ? PositiveLevelConfig[level] : LevelConfig[level];
             const percentage = (count / maxCount) * 100;
             
             return (
@@ -159,8 +201,8 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       {/* Timeline Chart */}
       <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
         <h3 className="text-sm font-bold text-slate-700 mb-8 flex items-center gap-2">
-          <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
-          震感频次趋势 (近 {range === 365 ? '1年' : range === 30 ? '1月' : `${range}天`})
+          <div className={`w-1.5 h-4 ${isPositive ? 'bg-emerald-500' : 'bg-indigo-500'} rounded-full`}></div>
+          {isPositive ? '建设频次趋势' : '震感频次趋势'} (近 {range === 365 ? '1年' : range === 30 ? '1月' : `${range}天`})
         </h3>
         
         <div className="relative h-40 w-full px-2">
@@ -173,8 +215,8 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                <stop offset="0%" stopColor={isPositive ? '#10b981' : '#6366f1'} stopOpacity="0.3" />
+                <stop offset="100%" stopColor={isPositive ? '#10b981' : '#6366f1'} stopOpacity="0" />
               </linearGradient>
             </defs>
             
@@ -194,7 +236,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                 `${i === 0 ? 'M' : 'L'} ${(i / (timelineData.length - 1)) * 100} ${100 - (d.count / maxTimelineCount) * 100}`
               ).join(' ')}
               fill="none"
-              stroke="#6366f1"
+              stroke={isPositive ? '#10b981' : '#6366f1'}
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -212,7 +254,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                 cy={`${100 - (d.count / maxTimelineCount) * 100}%`}
                 r="4"
                 fill="white"
-                stroke="#6366f1"
+                stroke={isPositive ? '#10b981' : '#6366f1'}
                 strokeWidth="2"
                 className="transition-all duration-1000 ease-out"
               />
@@ -225,7 +267,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
               <div key={i} className="relative h-full flex flex-col items-center group" style={{ width: `${100 / timelineData.length}%` }}>
                 {/* Tooltip */}
                 <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 font-bold shadow-xl border border-white/10">
-                  {data.count} 次震感 ({data.label})
+                  {data.count} 次{isPositive ? '记录' : '震感'} ({data.label})
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
                 </div>
                 
@@ -233,7 +275,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                 
                 {/* Label - Only show some for large ranges */}
                 <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
-                  <span className={`text-[9px] font-bold text-slate-400 group-hover:text-indigo-600 transition-colors ${
+                  <span className={`text-[9px] font-bold text-slate-400 group-hover:${isPositive ? 'text-emerald-600' : 'text-indigo-600'} transition-colors ${
                     range > 7 && i % Math.ceil(range/7) !== 0 ? 'hidden' : ''
                   }`}>
                     {data.label}
@@ -248,8 +290,8 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       {/* Intensity Sum Chart */}
       <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
         <h3 className="text-sm font-bold text-slate-700 mb-8 flex items-center gap-2">
-          <div className="w-1.5 h-4 bg-rose-500 rounded-full"></div>
-          地震强度趋势 (加权总和)
+          <div className={`w-1.5 h-4 ${isPositive ? 'bg-amber-500' : 'bg-rose-500'} rounded-full`}></div>
+          {isPositive ? '建设强度趋势 (加权)' : '地震强度趋势 (加权)'}
         </h3>
         
         <div className="relative h-40 w-full px-2">
@@ -261,15 +303,15 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <linearGradient id="intensityGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
+                <stop offset="0%" stopColor={isPositive ? '#f59e0b' : '#f43f5e'} stopOpacity="0.3" />
+                <stop offset="100%" stopColor={isPositive ? '#f59e0b' : '#f43f5e'} stopOpacity="0" />
               </linearGradient>
             </defs>
             
             <path
               d={`
-                M 0 ${100 - (timelineData[0].intensitySum / maxIntensitySum) * 100}
-                ${timelineData.map((d, i) => `L ${(i / (timelineData.length - 1)) * 100} ${100 - (d.intensitySum / maxIntensitySum) * 100}`).join(' ')}
+                M 0 ${100 - (intensityData[0].intensitySum / maxIntensitySum) * 100}
+                ${intensityData.map((d, i) => `L ${(i / (intensityData.length - 1)) * 100} ${100 - (d.intensitySum / maxIntensitySum) * 100}`).join(' ')}
                 L 100 100 L 0 100 Z
               `}
               fill="url(#intensityGradient)"
@@ -278,11 +320,11 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             />
             
             <path
-              d={timelineData.map((d, i) => 
-                `${i === 0 ? 'M' : 'L'} ${(i / (timelineData.length - 1)) * 100} ${100 - (d.intensitySum / maxIntensitySum) * 100}`
+              d={intensityData.map((d, i) => 
+                `${i === 0 ? 'M' : 'L'} ${(i / (intensityData.length - 1)) * 100} ${100 - (d.intensitySum / maxIntensitySum) * 100}`
               ).join(' ')}
               fill="none"
-              stroke="#f43f5e"
+              stroke={isPositive ? '#f59e0b' : '#f43f5e'}
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -293,23 +335,25 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
 
           {/* SVG Data Points (Not Stretched) */}
           <svg className="absolute inset-0 w-full h-full px-2 py-4 overflow-visible pointer-events-none">
-            {range <= 31 && timelineData.map((d, i) => (
+            {range <= 31 && intensityData.map((d, i) => (
               <circle
                 key={i}
-                cx={`${(i / (timelineData.length - 1)) * 100}%`}
+                cx={`${(i / (intensityData.length - 1)) * 100}%`}
                 cy={`${100 - (d.intensitySum / maxIntensitySum) * 100}%`}
                 r="4"
                 fill="white"
-                stroke="#f43f5e"
+                stroke={isPositive ? '#f59e0b' : '#f43f5e'}
                 strokeWidth="2"
                 className="transition-all duration-1000 ease-out"
               />
             ))}
           </svg>
 
+          {/* Interaction Layer */}
           <div className="absolute inset-0 flex justify-between px-2 py-4">
-            {timelineData.map((data, i) => (
-              <div key={i} className="relative h-full flex flex-col items-center group" style={{ width: `${100 / timelineData.length}%` }}>
+            {intensityData.map((data, i) => (
+              <div key={i} className="relative h-full flex flex-col items-center group" style={{ width: `${100 / intensityData.length}%` }}>
+                {/* Tooltip */}
                 <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 font-bold shadow-xl border border-white/10">
                   强度值: {data.intensitySum} ({data.label})
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45"></div>
@@ -317,8 +361,9 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                 
                 <div className="absolute inset-0 w-full h-full cursor-pointer"></div>
                 
+                {/* Label */}
                 <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
-                  <span className={`text-[9px] font-bold text-slate-400 group-hover:text-rose-600 transition-colors ${
+                  <span className={`text-[9px] font-bold text-slate-400 group-hover:${isPositive ? 'text-amber-600' : 'text-rose-600'} transition-colors ${
                     range > 7 && i % Math.ceil(range/7) !== 0 ? 'hidden' : ''
                   }`}>
                     {data.label}

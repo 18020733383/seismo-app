@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { IntensityLevel, LevelConfig } from '../types';
+import { IntensityLevel, LevelConfig, PositiveLevelConfig, LogType } from '../types';
 
 interface Props {
   level: IntensityLevel;
-  onSubmit: (content: string, isAftershock: boolean, tags: string[]) => void;
+  onSubmit: (content: string, isAftershock: boolean, tags: string[], type: LogType) => void;
   onCancel: () => void;
   existingTags?: string[];
+  logType: LogType;
+  setLogType: (type: LogType) => void;
 }
 
-export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel, existingTags = [] }) => {
+export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel, existingTags = [], logType, setLogType }) => {
   const [content, setContent] = useState('');
   const [isAftershock, setIsAftershock] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const config = LevelConfig[level];
+  
+  const config = logType === 'positive' ? PositiveLevelConfig[level] : LevelConfig[level];
 
   const handleAddTag = (tag: string) => {
     const cleanTag = tag.trim().replace(/^#/, '');
@@ -38,7 +41,7 @@ export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel,
       finalTags.push(cleanTag);
     }
     
-    onSubmit(content, isAftershock, finalTags);
+    onSubmit(content, isAftershock, finalTags, logType);
     setContent('');
     setSelectedTags([]);
     setTagInput('');
@@ -52,6 +55,34 @@ export const EarthquakeLogInput: React.FC<Props> = ({ level, onSubmit, onCancel,
         {(level === IntensityLevel.Level1 || level === IntensityLevel.Level2) && (
             <div className={`absolute top-0 left-0 w-full h-2 ${level === IntensityLevel.Level1 ? 'bg-red-600 animate-pulse' : 'bg-orange-600'} `}></div>
         )}
+
+        {/* Type Toggle */}
+        <div className="flex justify-center mb-6">
+          <div className="bg-slate-100 p-1 rounded-xl flex gap-1 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setLogType('negative')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                logType === 'negative' 
+                  ? 'bg-white text-red-600 shadow-sm ring-1 ring-black/5' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              📉 震感记录 (Seismic)
+            </button>
+            <button
+              type="button"
+              onClick={() => setLogType('positive')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                logType === 'positive' 
+                  ? 'bg-white text-emerald-600 shadow-sm ring-1 ring-black/5' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              🏗️ 建设记录 (Build)
+            </button>
+          </div>
+        </div>
 
         <div className="flex items-center justify-between mb-4">
             <div>
