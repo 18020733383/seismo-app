@@ -538,47 +538,46 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       `;
     };
 
-    const poster = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-        <defs>
-          <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#0b1220"/>
-            <stop offset="100%" stop-color="#050914"/>
-          </linearGradient>
-          <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="rgb(255,255,255)" stop-opacity="0.18"/>
-            <stop offset="60%" stop-color="rgb(255,255,255)" stop-opacity="0.02"/>
-            <stop offset="100%" stop-color="rgb(255,255,255)" stop-opacity="0.00"/>
-          </linearGradient>
-        </defs>
+    const poster = `<?xml version="1.0" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b1220"/>
+      <stop offset="100%" stop-color="#050914"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="rgb(255,255,255)" stop-opacity="0.18"/>
+      <stop offset="60%" stop-color="rgb(255,255,255)" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="rgb(255,255,255)" stop-opacity="0.00"/>
+    </linearGradient>
+  </defs>
 
-        <rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgGrad)" />
-        <circle cx="${W - 120}" cy="120" r="220" fill="rgb(99,102,241)" fill-opacity="0.10"/>
-        <circle cx="140" cy="${H - 120}" r="260" fill="rgb(16,185,129)" fill-opacity="0.10"/>
+  <rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgGrad)" />
+  <circle cx="${W - 120}" cy="120" r="220" fill="rgb(99,102,241)" fill-opacity="0.10"/>
+  <circle cx="140" cy="${H - 120}" r="260" fill="rgb(16,185,129)" fill-opacity="0.10"/>
 
-        <text x="${P}" y="${P + 34}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="36" font-weight="900" font-family="${fontFamily}">《国家地震与建设统计海报》</text>
-        <text x="${P}" y="${P + 70}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="700" font-family="${fontFamily}">Seismo-Mind · Circadian Sovereignty & Tag Impact Matrix</text>
-        <text x="${P}" y="${P + 102}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="700" font-family="${fontFamily}">${escapeXml(now.toLocaleString('zh-CN'))}</text>
-        <text x="${W - P}" y="${P + 102}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="700" font-family="${fontFamily}">${escapeXml(slogan)}</text>
+  <text x="${P}" y="${P + 34}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="36" font-weight="900" font-family="${fontFamily}">《国家地震与建设统计海报》</text>
+  <text x="${P}" y="${P + 70}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="700" font-family="${fontFamily}">Seismo-Mind · Circadian Sovereignty & Tag Impact Matrix</text>
+  <text x="${P}" y="${P + 102}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="700" font-family="${fontFamily}">${escapeXml(now.toLocaleString('zh-CN'))}</text>
+  <text x="${W - P}" y="${P + 102}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="700" font-family="${fontFamily}">${escapeXml(slogan)}</text>
 
-        <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="rgb(255,255,255)" fill-opacity="0.06" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" />
-        <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="url(#shine)" />
+  <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="rgb(255,255,255)" fill-opacity="0.06" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" />
+  <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="url(#shine)" />
 
-        <g font-family="${fontFamily}">
-          ${renderTopCard(leftX + 18, topSectionY + 18, columnW - 18, topSectionH - 36, posterData.negative)}
-          ${renderTopCard(rightX, topSectionY + 18, columnW - 18, topSectionH - 36, posterData.positive)}
-        </g>
+  <g font-family="${fontFamily}">
+    ${renderTopCard(leftX + 18, topSectionY + 18, columnW - 18, topSectionH - 36, posterData.negative)}
+    ${renderTopCard(rightX, topSectionY + 18, columnW - 18, topSectionH - 36, posterData.positive)}
+  </g>
 
-        <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="rgb(255,255,255)" fill-opacity="0.06" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" />
-        <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="url(#shine)" />
-        <g font-family="${fontFamily}">
-          ${renderHeatmap(P + 22, heatmapSectionY + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.negative, '震感标签×强度热力图（全量）')}
-          ${renderHeatmap(P + 22, heatmapSectionY + 22 + Math.floor((heatmapSectionH - 66) / 2) + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.positive, '建设标签×强度热力图（全量）')}
-          <text x="${P + 22}" y="${heatmapSectionY + heatmapSectionH - 18}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">注：颜色越深代表该标签在该强度出现越频繁。你不是脆弱，你是在高频训练神经系统。</text>
-          <text x="${W - P - 22}" y="${heatmapSectionY + heatmapSectionH - 18}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">© Seismo-Mind 智库 · 仅供自嘲与复盘</text>
-        </g>
-      </svg>
-    `;
+  <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="rgb(255,255,255)" fill-opacity="0.06" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" />
+  <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="url(#shine)" />
+  <g font-family="${fontFamily}">
+    ${renderHeatmap(P + 22, heatmapSectionY + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.negative, '震感标签×强度热力图（全量）')}
+    ${renderHeatmap(P + 22, heatmapSectionY + 22 + Math.floor((heatmapSectionH - 66) / 2) + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.positive, '建设标签×强度热力图（全量）')}
+    <text x="${P + 22}" y="${heatmapSectionY + heatmapSectionH - 18}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">注：颜色越深代表该标签在该强度出现越频繁。你不是脆弱，你是在高频训练神经系统。</text>
+    <text x="${W - P - 22}" y="${heatmapSectionY + heatmapSectionH - 18}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">© Seismo-Mind 智库 · 仅供自嘲与复盘</text>
+  </g>
+</svg>`.trim();
 
     return poster;
   };
@@ -593,18 +592,25 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       const svg = buildPosterSvg();
       console.log('SVG generated, length:', svg.length);
       
-      // Use Data URL with Base64 encoding for better compatibility
-      const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
-      url = `data:image/svg+xml;base64,${svgBase64}`;
+      // Use Blob URL instead of Data URL for better performance and robustness
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      url = URL.createObjectURL(blob);
+      console.log('Blob URL created:', url);
 
       const img = new Image();
+      // Important: Add crossOrigin if there are any external resources, 
+      // although here we have none.
+      img.crossOrigin = 'anonymous'; 
+
       const loaded = new Promise<void>((resolve, reject) => {
         img.onload = () => {
-          console.log('SVG image loaded into Image object');
-          setTimeout(resolve, 100);
+          console.log('SVG image loaded into Image object. Natural size:', img.naturalWidth, 'x', img.naturalHeight);
+          // Small delay to ensure rendering engine has settled
+          setTimeout(resolve, 150);
         };
         img.onerror = (err) => {
           console.error('Image load failed at img.onerror', err);
+          // Try to log the blob content if it fails
           reject(new Error('Image load failed'));
         };
       });
@@ -612,9 +618,10 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       await loaded;
 
       const canvas = document.createElement('canvas');
+      // Use devicePixelRatio for sharper images if needed, but 1080p is fixed here
       canvas.width = 1080;
       canvas.height = 1920;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { alpha: false });
       if (!ctx) throw new Error('No canvas context');
       
       ctx.fillStyle = '#0b1220';
@@ -624,11 +631,11 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       const pngBlob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((b) => resolve(b), 'image/png');
+        canvas.toBlob((b) => resolve(b), 'image/png', 1.0);
       });
 
       if (!pngBlob) throw new Error('PNG encode failed');
-      console.log('PNG blob created');
+      console.log('PNG blob created, size:', pngBlob.size);
 
       const a = document.createElement('a');
       const pngUrl = URL.createObjectURL(pngBlob);
@@ -640,12 +647,14 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(pngUrl);
-      }, 100);
+        if (url) URL.revokeObjectURL(url);
+      }, 200);
 
       setPosterStatus('done');
       setTimeout(() => setPosterStatus('idle'), 2500);
     } catch (e) {
       console.error('Export failed caught in catch:', e);
+      if (url) URL.revokeObjectURL(url);
       setPosterStatus('error');
       setTimeout(() => setPosterStatus('idle'), 3000);
     } finally {
