@@ -322,7 +322,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       danger: '#fb7185',
     };
 
-    const fontFamily = "ui-sans-serif, system-ui, -apple-system, sans-serif";
+    const fontFamily = "sans-serif";
 
     const headerH = 170;
     const topSectionY = P + headerH;
@@ -384,9 +384,9 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
         <circle cx="${cx}" cy="${cy}" r="${rOuter}" fill="rgb(255,255,255)" fill-opacity="0.05" stroke="rgb(255,255,255)" stroke-opacity="0.12" stroke-width="1" />
         ${segments}
         <circle cx="${cx}" cy="${cy}" r="${rInner - 10}" fill="rgb(11,18,32)" fill-opacity="0.70" stroke="rgb(255,255,255)" stroke-opacity="0.10" stroke-width="1" />
-        <text x="${cx}" y="${cy - 8}" text-anchor="middle" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="12" font-weight="900">${title}</text>
-        <text x="${cx}" y="${cy + 18}" text-anchor="middle" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="22" font-weight="1000">${stats.total}</text>
-        <text x="${cx}" y="${cy + 38}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900">峰值 ${peakLabel}</text>
+        <text x="${cx}" y="${cy - 8}" text-anchor="middle" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="12" font-weight="700">${title}</text>
+        <text x="${cx}" y="${cy + 18}" text-anchor="middle" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="22" font-weight="900">${stats.total}</text>
+        <text x="${cx}" y="${cy + 38}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">峰值 ${peakLabel}</text>
       `;
     };
 
@@ -401,7 +401,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       const tags = stats.tagKeys;
       if (tags.length === 0) {
         return `
-          <text x="${x}" y="${y + 18}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="1000">${escapeXml(title)}</text>
+          <text x="${x}" y="${y + 18}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="900">${escapeXml(title)}</text>
           <text x="${x}" y="${y + 46}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="12" font-weight="800">暂无标签数据</text>
         `;
       }
@@ -439,11 +439,11 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           .sort((a, b) => b - a)
           .map((level, i) => {
             const lx = colX + labelW + 10 + i * cell + cell / 2;
-            return `<text x="${lx}" y="${bodyY - 12}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="10" font-weight="1000">L${level}</text>`;
+            return `<text x="${lx}" y="${bodyY - 12}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="10" font-weight="900">L${level}</text>`;
           })
           .join('');
         return `
-          <text x="${colX}" y="${bodyY - 12}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="10" font-weight="1000">TAG</text>
+          <text x="${colX}" y="${bodyY - 12}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="10" font-weight="900">TAG</text>
           ${levelLabels}
         `;
       };
@@ -451,7 +451,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       const levelOrder = posterData.levels.slice().sort((a, b) => b - a);
 
       let out = `
-        <text x="${x}" y="${y + 18}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="1000">${escapeXml(title)}</text>
+        <text x="${x}" y="${y + 18}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="900">${escapeXml(title)}</text>
         <text x="${x + w}" y="${y + 18}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900">${escapeXml(stats.timeRangeText)}</text>
       `;
 
@@ -485,7 +485,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                 : '0.88';
             out += `
               <rect x="${cx}" y="${ry + 6}" width="${cell - 4}" height="${cell - 4}" rx="8" fill="${fill.rgb}" fill-opacity="${fill.alpha}" stroke="rgb(255,255,255)" stroke-opacity="0.18" />
-              <text x="${cx + (cell - 4) / 2}" y="${ry + cell - 4}" text-anchor="middle" fill="${textFill}" fill-opacity="${textOpacity}" font-size="11" font-weight="1000">${count === 0 ? '·' : count}</text>
+              <text x="${cx + (cell - 4) / 2}" y="${ry + cell - 4}" text-anchor="middle" fill="${textFill}" fill-opacity="${textOpacity}" font-size="11" font-weight="900">${count === 0 ? '·' : count}</text>
             `;
           }
         }
@@ -511,30 +511,30 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       return `
         <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${cardR}" fill="${palette.card}" fill-opacity="${palette.cardAlpha}" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" />
         <rect x="${x + cardPad}" y="${y + cardPad - 2}" width="6" height="22" rx="3" fill="${accent}" />
-        <text x="${x + cardPad + 14}" y="${y + cardPad + 14}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="18" font-weight="1000">${escapeXml(title)}</text>
-        <text x="${x + w - cardPad}" y="${y + cardPad + 14}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="12" font-weight="1000">${badge}</text>
+        <text x="${x + cardPad + 14}" y="${y + cardPad + 14}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="18" font-weight="900">${escapeXml(title)}</text>
+        <text x="${x + w - cardPad}" y="${y + cardPad + 14}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="12" font-weight="900">${badge}</text>
 
-        <text x="${x + cardPad + 14}" y="${y + 78}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900">总事件</text>
-        <text x="${x + cardPad + 14}" y="${y + 115}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="44" font-weight="1100">${stats.total}</text>
+        <text x="${x + cardPad + 14}" y="${y + 78}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">总事件</text>
+        <text x="${x + cardPad + 14}" y="${y + 115}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="44" font-weight="900">${stats.total}</text>
 
-        <text x="${x + cardPad + 190}" y="${y + 78}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900">日均</text>
-        <text x="${x + cardPad + 190}" y="${y + 115}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="26" font-weight="1100">${stats.perDay.toFixed(1)}</text>
-        <text x="${x + cardPad + 252}" y="${y + 115}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="12" font-weight="900">/天</text>
+        <text x="${x + cardPad + 190}" y="${y + 78}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">日均</text>
+        <text x="${x + cardPad + 190}" y="${y + 115}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="26" font-weight="900">${stats.perDay.toFixed(1)}</text>
+        <text x="${x + cardPad + 252}" y="${y + 115}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="12" font-weight="700">/天</text>
 
-        <text x="${x + cardPad + 190}" y="${y + 148}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900">强度权重均值</text>
-        <text x="${x + cardPad + 190}" y="${y + 178}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="22" font-weight="1100">${stats.avgIntensityWeight.toFixed(2)}</text>
-        <text x="${x + cardPad + 252}" y="${y + 178}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="12" font-weight="900">/ 6</text>
+        <text x="${x + cardPad + 190}" y="${y + 148}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">强度权重均值</text>
+        <text x="${x + cardPad + 190}" y="${y + 178}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="22" font-weight="900">${stats.avgIntensityWeight.toFixed(2)}</text>
+        <text x="${x + cardPad + 252}" y="${y + 178}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="12" font-weight="700">/ 6</text>
 
         <g>
           ${renderCircadianRing(ringCx, ringCy, 42, 62, stats)}
         </g>
 
-        <text x="${distX}" y="${distY - 10}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="12" font-weight="1000">强度分布（L6→L1）</text>
+        <text x="${distX}" y="${distY - 10}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="12" font-weight="900">强度分布（L6→L1）</text>
         <g>
           ${renderDistributionBars(distX, distY, w - cardPad * 2, stats)}
         </g>
 
-        <text x="${x + cardPad}" y="${y + h - 18}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900">${escapeXml(tip)}</text>
+        <text x="${x + cardPad}" y="${y + h - 18}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">${escapeXml(tip)}</text>
       `;
     };
 
@@ -550,21 +550,18 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             <stop offset="60%" stop-color="rgb(255,255,255)" stop-opacity="0.02"/>
             <stop offset="100%" stop-color="rgb(255,255,255)" stop-opacity="0.00"/>
           </linearGradient>
-          <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="rgb(0,0,0)" flood-opacity="0.45"/>
-          </filter>
         </defs>
 
         <rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgGrad)" />
         <circle cx="${W - 120}" cy="120" r="220" fill="rgb(99,102,241)" fill-opacity="0.10"/>
         <circle cx="140" cy="${H - 120}" r="260" fill="rgb(16,185,129)" fill-opacity="0.10"/>
 
-        <text x="${P}" y="${P + 34}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="36" font-weight="1200" font-family="${fontFamily}">《国家地震与建设统计海报》</text>
-        <text x="${P}" y="${P + 70}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="1000" font-family="${fontFamily}">Seismo-Mind · Circadian Sovereignty & Tag Impact Matrix</text>
-        <text x="${P}" y="${P + 102}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="1000" font-family="${fontFamily}">${escapeXml(now.toLocaleString('zh-CN'))}</text>
-        <text x="${W - P}" y="${P + 102}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="1000" font-family="${fontFamily}">${escapeXml(slogan)}</text>
+        <text x="${P}" y="${P + 34}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="36" font-weight="900" font-family="${fontFamily}">《国家地震与建设统计海报》</text>
+        <text x="${P}" y="${P + 70}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="700" font-family="${fontFamily}">Seismo-Mind · Circadian Sovereignty & Tag Impact Matrix</text>
+        <text x="${P}" y="${P + 102}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="700" font-family="${fontFamily}">${escapeXml(now.toLocaleString('zh-CN'))}</text>
+        <text x="${W - P}" y="${P + 102}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="700" font-family="${fontFamily}">${escapeXml(slogan)}</text>
 
-        <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="rgb(255,255,255)" fill-opacity="0.06" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" filter="url(#softShadow)" />
+        <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="rgb(255,255,255)" fill-opacity="0.06" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" />
         <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="url(#shine)" />
 
         <g font-family="${fontFamily}">
@@ -572,13 +569,13 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           ${renderTopCard(rightX, topSectionY + 18, columnW - 18, topSectionH - 36, posterData.positive)}
         </g>
 
-        <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="rgb(255,255,255)" fill-opacity="0.06" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" filter="url(#softShadow)" />
+        <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="rgb(255,255,255)" fill-opacity="0.06" stroke="${palette.cardStroke}" stroke-opacity="${palette.cardStrokeAlpha}" />
         <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="url(#shine)" />
         <g font-family="${fontFamily}">
           ${renderHeatmap(P + 22, heatmapSectionY + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.negative, '震感标签×强度热力图（全量）')}
           ${renderHeatmap(P + 22, heatmapSectionY + 22 + Math.floor((heatmapSectionH - 66) / 2) + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.positive, '建设标签×强度热力图（全量）')}
-          <text x="${P + 22}" y="${heatmapSectionY + heatmapSectionH - 18}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900">注：颜色越深代表该标签在该强度出现越频繁。你不是脆弱，你是在高频训练神经系统。</text>
-          <text x="${W - P - 22}" y="${heatmapSectionY + heatmapSectionH - 18}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900">© Seismo-Mind 智库 · 仅供自嘲与复盘</text>
+          <text x="${P + 22}" y="${heatmapSectionY + heatmapSectionH - 18}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">注：颜色越深代表该标签在该强度出现越频繁。你不是脆弱，你是在高频训练神经系统。</text>
+          <text x="${W - P - 22}" y="${heatmapSectionY + heatmapSectionH - 18}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">© Seismo-Mind 智库 · 仅供自嘲与复盘</text>
         </g>
       </svg>
     `;
@@ -590,19 +587,24 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
     if (isExportingPoster) return;
     setIsExportingPoster(true);
     setPosterStatus('idle');
+    let url = '';
     try {
+      console.log('Starting poster export...');
       const svg = buildPosterSvg();
-      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
+      console.log('SVG generated, length:', svg.length);
+      
+      // Use Data URL with Base64 encoding for better compatibility
+      const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
+      url = `data:image/svg+xml;base64,${svgBase64}`;
 
       const img = new Image();
       const loaded = new Promise<void>((resolve, reject) => {
         img.onload = () => {
-          // Give it a tiny bit more time for layout engine to settle
-          setTimeout(resolve, 50);
+          console.log('SVG image loaded into Image object');
+          setTimeout(resolve, 100);
         };
         img.onerror = (err) => {
-          console.error('Image load failed', err);
+          console.error('Image load failed at img.onerror', err);
           reject(new Error('Image load failed'));
         };
       });
@@ -615,10 +617,10 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('No canvas context');
       
-      // Clear with background color first
       ctx.fillStyle = '#0b1220';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
+      console.log('Drawing image to canvas...');
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       const pngBlob = await new Promise<Blob | null>((resolve) => {
@@ -626,6 +628,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       });
 
       if (!pngBlob) throw new Error('PNG encode failed');
+      console.log('PNG blob created');
 
       const a = document.createElement('a');
       const pngUrl = URL.createObjectURL(pngBlob);
@@ -634,17 +637,15 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       document.body.appendChild(a);
       a.click();
       
-      // Cleanup
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(pngUrl);
-        URL.revokeObjectURL(url);
       }, 100);
 
       setPosterStatus('done');
       setTimeout(() => setPosterStatus('idle'), 2500);
     } catch (e) {
-      console.error('Export failed:', e);
+      console.error('Export failed caught in catch:', e);
       setPosterStatus('error');
       setTimeout(() => setPosterStatus('idle'), 3000);
     } finally {
