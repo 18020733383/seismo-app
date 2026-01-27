@@ -5,6 +5,12 @@ interface WhitepaperProps {
   logs: SeismicLog[];
 }
 
+interface Indicator {
+  name: string;
+  score: number;
+  reason: string;
+}
+
 interface NationalReport {
   title: string;
   generatedAt: string;
@@ -13,6 +19,17 @@ interface NationalReport {
     inflation: string; // Mood Volatility
     stability: number;
     happiness: number;
+  };
+  indicators: {
+    politics: Indicator; // 政治生态
+    admin: Indicator;    // 行政效能
+    economy: Indicator;  // 经济情况
+    gini: Indicator;     // 基尼系数
+    debt: Indicator;     // 债务杠杆
+    defense: Indicator;  // 国防建设
+    diplomacy: Indicator;// 外交
+    stabilityControl: Indicator; // 维稳力度
+    nuclear: Indicator;  // 核按钮指数
   };
   parliament: {
     rulingParty: string;
@@ -25,6 +42,7 @@ interface NationalReport {
     heart: string;
     liver: string;
     limbs: string;
+    stomach: string;
   };
   strategicOutlook: string[];
 }
@@ -57,6 +75,17 @@ export const Whitepaper: React.FC<WhitepaperProps> = ({ logs }) => {
           stability: Math.floor(Math.random() * 40) + 50,
           happiness: Math.floor(Math.random() * 40) + 40,
         },
+        indicators: {
+          politics: { name: '政治生态', score: 65, reason: '近期情绪波动较大，存在局部动荡风险' },
+          admin: { name: '行政效能', score: 42, reason: '大脑指令下达后，四肢执行延迟严重，拖延症蔓延' },
+          economy: { name: '经济情况', score: 78, reason: '多巴胺汇率稳定，但实体劳动产出略显不足' },
+          gini: { name: '基尼系数', score: 85, reason: '严重依赖短期爽感，长远成就感分配极度匮乏' },
+          debt: { name: '债务杠杆', score: 92, reason: '熬夜透支严重，主权信用评级面临下调风险' },
+          defense: { name: '国防建设', score: 30, reason: '核心肌群军备废弛，抵抗力防线薄弱' },
+          diplomacy: { name: '外交关系', score: 70, reason: '与外界保持正常贸易，但深层盟友关系疏远' },
+          stabilityControl: { name: '维稳力度', score: 55, reason: '对夜宵和娱乐的本能欲望控制力较弱' },
+          nuclear: { name: '核按钮指数', score: 10, reason: '偶尔有自暴自弃倾向，但总体可控' },
+        },
         parliament: {
           rulingParty: parties[Math.floor(Math.random() * parties.length)],
           opposition: parties[Math.floor(Math.random() * parties.length)],
@@ -68,6 +97,7 @@ export const Whitepaper: React.FC<WhitepaperProps> = ({ logs }) => {
           heart: '心率起伏较大，强烈建议减少咖啡因摄入，增加“心动”预算',
           liver: '作为沉默的大多数，表示“我还能忍，但别太过分”',
           limbs: '抗议严重缺乏运动，声称已经忘记了奔跑的感觉',
+          stomach: '表示最近接收的垃圾食品过多，要求增加膳食纤维补贴',
         },
         strategicOutlook: [
           '建议立即启动“早睡早起”紧急法案',
@@ -90,26 +120,33 @@ export const Whitepaper: React.FC<WhitepaperProps> = ({ logs }) => {
 ${recentLogs || '（暂无近期记录，请根据“百废待兴”的状态自由发挥）'}
 
 **报告结构要求：**
-1. **国家核心指标**：
-   - 多巴胺GDP（根据正向记录估算）
-   - 情绪通胀率（根据负向记录频率和强度估算）
-   - 社会稳定指数（综合评分）
 
-2. **议会风云（幽默讽刺）**：
+1. **国家核心指标（请给出0-100的评分和简短理由）：**
+   - **政治生态**（精神状态稳定程度）：是否出现大振幅的情绪波动？
+   - **行政效能**（意志力执行率）：决策层（大脑）下达指令后，基层单位（四肢）的响应速度。是否拖延？
+   - **经济情况**（多巴胺汇率）：实际劳动与获得的多巴胺回报是否匹配？
+   - **基尼系数**（快乐分配）：是沉迷“瞬间爽感（刷手机）”还是追求“长远成就感”？差距是否过大？
+   - **债务杠杆率**（Emotional Debt）：为了现在的“闲适”透支了未来多少睡眠和健康？是否存在“违约”风险？
+   - **国防建设**（身体状况）：健身与健康储备情况。
+   - **外交关系**（人际社交）：社交活跃度与质量。
+   - **维稳力度**（自控力）：能否控制本能欲望（食欲、懒惰）或情绪暴走？
+   - **核按钮指数**（自毁倾向）：是否有自我伤害或彻底摆烂的危险倾向？
+
+2. **议会风云（幽默讽刺）：**
    - 谁是当前的执政党？（如“熬夜党”、“焦虑党”、“奋斗逼党”）
-   - 发生了什么政治丑闻？（如“运动计划被挪用资金”）
+   - 发生了什么政治丑闻？（如“运动计划拨款被挪用买奶茶”）
    - 党派之间的恩怨情仇。
 
-3. **居民之声（身体各部位的吐槽）**：
+3. **居民之声（身体各部位的吐槽）：**
    - 大脑（总统/议长）：最近的想法和决策评价。
    - 肝脏（劳模）：对作息的抱怨。
    - 四肢（底层劳工）：对运动量的反馈。
    - 胃部（后勤部长）：对饮食的评价。
 
-4. **战略展望**：
+4. **战略展望：**
    - 下阶段的国策建议（严肃中带着调侃）。
 
-**风格要求**：
+**风格要求：**
 - 模仿官方严肃文件的口吻，但内容极其荒诞幽默。
 - 将心理活动比作国家政治博弈。
 - 毒舌，但充满关怀。
@@ -221,6 +258,42 @@ ${recentLogs || '（暂无近期记录，请根据“百废待兴”的状态自
                   <p className="text-xl font-black text-slate-800">{report.metrics.happiness}</p>
                   <span className="text-[10px] font-bold text-slate-400 mb-1">/ 100</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Detailed Indicators */}
+            <div className="mb-6 bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+              <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                <span className="text-xl">📊</span> 核心指标评分
+              </h3>
+              <div className="space-y-4">
+                {Object.values(report.indicators).map((indicator, i) => (
+                  <div key={i} className="bg-slate-50 p-3 rounded-xl">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-bold text-slate-700">{indicator.name}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full ${
+                              indicator.score >= 80 ? 'bg-emerald-500' : 
+                              indicator.score >= 60 ? 'bg-blue-500' : 
+                              indicator.score >= 40 ? 'bg-yellow-500' : 'bg-rose-500'
+                            }`} 
+                            style={{ width: `${indicator.score}%` }}
+                          ></div>
+                        </div>
+                        <span className={`text-sm font-black ${
+                          indicator.score >= 80 ? 'text-emerald-600' : 
+                          indicator.score >= 60 ? 'text-blue-600' : 
+                          indicator.score >= 40 ? 'text-yellow-600' : 'text-rose-600'
+                        }`}>{indicator.score}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
+                      {indicator.reason}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
 
