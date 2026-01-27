@@ -11,10 +11,103 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
   const [range, setRange] = useState<RangeType>(7);
   const [statsType, setStatsType] = useState<LogType>('negative');
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
+  const [isExportingPoster, setIsExportingPoster] = useState(false);
+  const [posterStatus, setPosterStatus] = useState<'idle' | 'done' | 'error'>('idle');
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => (log.type || 'negative') === statsType);
   }, [logs, statsType]);
+
+  const posterData = useMemo(() => {
+    const levels: IntensityLevel[] = [
+      IntensityLevel.Level1,
+      IntensityLevel.Level2,
+      IntensityLevel.Level3,
+      IntensityLevel.Level4,
+      IntensityLevel.Level5,
+      IntensityLevel.Level6,
+    ];
+
+    const compute = (type: LogType) => {
+      const typeLogs = logs.filter(l => (l.type || 'negative') === type);
+      const levelCountsLocal: Record<IntensityLevel, number> = {
+        [IntensityLevel.Level1]: 0,
+        [IntensityLevel.Level2]: 0,
+        [IntensityLevel.Level3]: 0,
+        [IntensityLevel.Level4]: 0,
+        [IntensityLevel.Level5]: 0,
+        [IntensityLevel.Level6]: 0,
+      };
+      const hours = Array.from({ length: 24 }, () => 0);
+      const tagHeatmapCounts: Record<string, Record<number, number>> = {};
+
+      let minTs = Infinity;
+      let maxTs = -Infinity;
+
+      for (const log of typeLogs) {
+        levelCountsLocal[log.intensity]++;
+        const h = new Date(log.timestamp).getHours();
+        hours[h] += 1;
+
+        minTs = Math.min(minTs, log.timestamp);
+        maxTs = Math.max(maxTs, log.timestamp);
+
+        for (const tag of log.tags || []) {
+          if (!tagHeatmapCounts[tag]) tagHeatmapCounts[tag] = {};
+          tagHeatmapCounts[tag][log.intensity] = (tagHeatmapCounts[tag][log.intensity] || 0) + 1;
+        }
+      }
+
+      const total = typeLogs.length;
+      const daysSpan =
+        total === 0 ? 1 : Math.max(1, Math.ceil((Date.now() - minTs) / (1000 * 60 * 60 * 24)));
+      const perDay = total / daysSpan;
+
+      const maxLevelCount = Math.max(...levels.map(l => levelCountsLocal[l]), 1);
+      const maxHour = Math.max(...hours, 1);
+
+      const tagKeys = Object.keys(tagHeatmapCounts).sort((a, b) => {
+        const sumA = levels.reduce((sum, level) => sum + (tagHeatmapCounts[a]?.[level] || 0), 0);
+        const sumB = levels.reduce((sum, level) => sum + (tagHeatmapCounts[b]?.[level] || 0), 0);
+        return sumB - sumA;
+      });
+
+      let maxCell = 0;
+      for (const tag of tagKeys) {
+        for (const level of levels) {
+          maxCell = Math.max(maxCell, tagHeatmapCounts[tag]?.[level] || 0);
+        }
+      }
+
+      const intensityWeightSum = typeLogs.reduce((sum, l) => sum + (7 - l.intensity), 0);
+      const avgIntensityWeight = total === 0 ? 0 : intensityWeightSum / total;
+
+      return {
+        type,
+        total,
+        perDay,
+        daysSpan,
+        levelCounts: levelCountsLocal,
+        maxLevelCount,
+        hours,
+        maxHour,
+        tagKeys,
+        tagHeatmapCounts,
+        tagHeatmapMaxCell: Math.max(maxCell, 1),
+        avgIntensityWeight,
+        timeRangeText:
+          total === 0
+            ? '暂无记录'
+            : `${new Date(minTs).toLocaleDateString('zh-CN')} - ${new Date(maxTs).toLocaleDateString('zh-CN')}`,
+      };
+    };
+
+    return {
+      negative: compute('negative'),
+      positive: compute('positive'),
+      levels,
+    };
+  }, [logs]);
 
   // 1. Data Processing
   const totalCount = filteredLogs.length;
@@ -148,6 +241,23 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
     return `rgba(${base.r},${base.g},${base.b},${alpha})`;
   };
 
+  const getColorRgbaByType = (count: number, max: number, type: LogType) => {
+    const maxSafe = Math.max(max, 1);
+    const ratio = Math.min(Math.max(count / maxSafe, 0), 1);
+    const alpha = count === 0 ? 0.06 : 0.10 + ratio * 0.90;
+    const base = type === 'positive' ? { r: 16, g: 185, b: 129 } : { r: 99, g: 102, b: 241 };
+    return `rgba(${base.r},${base.g},${base.b},${alpha})`;
+  };
+
+  const escapeXml = (input: string) => {
+    return input
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&apos;');
+  };
+
   const polarToCartesian = (cx: number, cy: number, r: number, angleRad: number) => {
     return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
   };
@@ -172,6 +282,344 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       `A ${innerR} ${innerR} 0 ${largeArcFlag} 0 ${p1i.x} ${p1i.y}`,
       'Z',
     ].join(' ');
+  };
+
+  const buildPosterSvg = () => {
+    const W = 1080;
+    const H = 1920;
+    const P = 64;
+    const innerW = W - P * 2;
+    const now = new Date();
+
+    const slogans = [
+      '今日主权未沦陷：纯属侥幸',
+      '本报告不构成任何快乐建议',
+      '以震感为鉴，以建设为纲',
+      '别问，问就是财政吃紧',
+      '维稳靠咖啡，增长靠奇迹',
+    ];
+    const slogan = slogans[(now.getDate() + now.getHours()) % slogans.length];
+
+    const palette = {
+      bg: '#0b1220',
+      card: 'rgba(255,255,255,0.10)',
+      cardStroke: 'rgba(255,255,255,0.18)',
+      textMain: 'rgba(255,255,255,0.92)',
+      textSub: 'rgba(226,232,240,0.72)',
+      textDim: 'rgba(148,163,184,0.75)',
+      indigo: '#6366f1',
+      emerald: '#10b981',
+      warn: '#f59e0b',
+      danger: '#fb7185',
+    };
+
+    const fontFamily =
+      "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji'";
+
+    const headerH = 170;
+    const topSectionY = P + headerH;
+    const topSectionH = 410;
+    const heatmapSectionY = topSectionY + topSectionH + 24;
+    const heatmapSectionH = H - heatmapSectionY - P;
+
+    const leftX = P;
+    const rightX = P + innerW / 2 + 14;
+    const columnW = innerW / 2 - 14;
+
+    const cardR = 28;
+    const cardPad = 26;
+
+    const renderDistributionBars = (x: number, y: number, w: number, stats: typeof posterData.negative) => {
+      const rowH = 24;
+      const barMaxW = w - 86;
+      const rows = posterData.levels
+        .slice()
+        .sort((a, b) => b - a)
+        .map((level, idx) => {
+          const count = stats.levelCounts[level] || 0;
+          const pct = count / Math.max(stats.maxLevelCount, 1);
+          const bw = Math.max(4, Math.round(barMaxW * pct));
+          const label = `L${level}`;
+          const cy = y + idx * rowH;
+          const fill = level <= 2 ? palette.danger : level === 3 ? palette.warn : stats.type === 'positive' ? palette.emerald : palette.indigo;
+          return `
+            <text x="${x}" y="${cy + 16}" fill="${palette.textSub}" font-size="12" font-weight="800">${label}</text>
+            <rect x="${x + 32}" y="${cy + 6}" width="${barMaxW}" height="12" rx="6" fill="rgba(255,255,255,0.10)" />
+            <rect x="${x + 32}" y="${cy + 6}" width="${bw}" height="12" rx="6" fill="${fill}" />
+            <text x="${x + 32 + barMaxW + 10}" y="${cy + 16}" fill="${palette.textDim}" font-size="12" font-weight="800">${count}</text>
+          `;
+        })
+        .join('');
+
+      return rows;
+    };
+
+    const renderCircadianRing = (cx: number, cy: number, rInner: number, rOuter: number, stats: typeof posterData.negative) => {
+      const segments = stats.hours
+        .map((count, hour) => {
+          const start = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+          const end = ((hour + 1) / 24) * Math.PI * 2 - Math.PI / 2;
+          const d = describeRingSegment(cx, cy, rInner, rOuter, start, end);
+          const fill = getColorRgbaByType(count, stats.maxHour, stats.type);
+          return `<path d="${d}" fill="${fill}" stroke="rgba(255,255,255,0.55)" stroke-width="0.8" />`;
+        })
+        .join('');
+
+      const title = stats.type === 'positive' ? '建设黄金周期' : '主权沦陷周期';
+      const peak = stats.hours.reduce(
+        (acc, v, idx) => (v > acc.v ? { v, idx } : acc),
+        { v: -1, idx: 0 }
+      );
+      const peakLabel = peak.v <= 0 ? '无峰值' : `${String(peak.idx).padStart(2, '0')}:00`;
+
+      return `
+        <circle cx="${cx}" cy="${cy}" r="${rOuter}" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+        ${segments}
+        <circle cx="${cx}" cy="${cy}" r="${rInner - 10}" fill="rgba(11,18,32,0.70)" stroke="rgba(255,255,255,0.10)" stroke-width="1" />
+        <text x="${cx}" y="${cy - 8}" text-anchor="middle" fill="${palette.textSub}" font-size="12" font-weight="900">${title}</text>
+        <text x="${cx}" y="${cy + 18}" text-anchor="middle" fill="${palette.textMain}" font-size="22" font-weight="1000">${stats.total}</text>
+        <text x="${cx}" y="${cy + 38}" text-anchor="middle" fill="${palette.textDim}" font-size="11" font-weight="900">峰值 ${peakLabel}</text>
+      `;
+    };
+
+    const renderHeatmap = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      stats: typeof posterData.negative,
+      title: string
+    ) => {
+      const tags = stats.tagKeys;
+      if (tags.length === 0) {
+        return `
+          <text x="${x}" y="${y + 18}" fill="${palette.textSub}" font-size="14" font-weight="1000">${escapeXml(title)}</text>
+          <text x="${x}" y="${y + 46}" fill="${palette.textDim}" font-size="12" font-weight="800">暂无标签数据</text>
+        `;
+      }
+
+      const headerHLocal = 40;
+      const bodyY = y + headerHLocal;
+      const availH = Math.max(10, h - headerHLocal);
+
+      let cols = 1;
+      let cell = 22;
+      let labelW = 140;
+      let rowH = 28;
+
+      const computeLayout = () => {
+        const rowsPerCol = Math.max(1, Math.floor(availH / rowH));
+        cols = Math.max(1, Math.ceil(tags.length / rowsPerCol));
+        const gap = 14;
+        const colW = (w - gap * (cols - 1)) / cols;
+        labelW = Math.min(170, Math.max(100, Math.floor(colW * 0.40)));
+        cell = Math.floor((colW - labelW - 18) / 6);
+        rowH = Math.max(22, cell + 8);
+        return { rowsPerCol, gap, colW };
+      };
+
+      let layout = computeLayout();
+      while (cell < 16 && cols < 4) {
+        cols += 1;
+        layout = computeLayout();
+      }
+      if (cell < 14) cell = 14;
+
+      const renderHeader = (colX: number) => {
+        const levelLabels = posterData.levels
+          .slice()
+          .sort((a, b) => b - a)
+          .map((level, i) => {
+            const lx = colX + labelW + 10 + i * cell + cell / 2;
+            return `<text x="${lx}" y="${bodyY - 12}" text-anchor="middle" fill="${palette.textDim}" font-size="10" font-weight="1000">L${level}</text>`;
+          })
+          .join('');
+        return `
+          <text x="${colX}" y="${bodyY - 12}" fill="${palette.textDim}" font-size="10" font-weight="1000">TAG</text>
+          ${levelLabels}
+        `;
+      };
+
+      const levelOrder = posterData.levels.slice().sort((a, b) => b - a);
+
+      let out = `
+        <text x="${x}" y="${y + 18}" fill="${palette.textSub}" font-size="14" font-weight="1000">${escapeXml(title)}</text>
+        <text x="${x + w}" y="${y + 18}" text-anchor="end" fill="${palette.textDim}" font-size="11" font-weight="900">${escapeXml(stats.timeRangeText)}</text>
+      `;
+
+      for (let c = 0; c < cols; c++) {
+        const colX = x + c * (layout.colW + layout.gap);
+        out += renderHeader(colX);
+        const startIdx = c * layout.rowsPerCol;
+        const endIdx = Math.min(tags.length, startIdx + layout.rowsPerCol);
+        for (let i = startIdx; i < endIdx; i++) {
+          const tag = tags[i];
+          const row = i - startIdx;
+          const ry = bodyY + row * rowH;
+          const tagText = `#${tag}`;
+          out += `<text x="${colX}" y="${ry + cell}" fill="${palette.textMain}" font-size="12" font-weight="900">${escapeXml(tagText)}</text>`;
+          for (let j = 0; j < 6; j++) {
+            const level = levelOrder[j];
+            const count = stats.tagHeatmapCounts[tag]?.[level] || 0;
+            const cx = colX + labelW + 10 + j * cell;
+            const fill = getColorRgbaByType(count, stats.tagHeatmapMaxCell, stats.type);
+            const textFill =
+              count === 0
+                ? 'rgba(148,163,184,0.45)'
+                : count / Math.max(stats.tagHeatmapMaxCell, 1) >= 0.6
+                ? 'rgba(255,255,255,0.95)'
+                : 'rgba(15,23,42,0.88)';
+            out += `
+              <rect x="${cx}" y="${ry + 6}" width="${cell - 4}" height="${cell - 4}" rx="8" fill="${fill}" stroke="rgba(255,255,255,0.18)" />
+              <text x="${cx + (cell - 4) / 2}" y="${ry + cell - 4}" text-anchor="middle" fill="${textFill}" font-size="11" font-weight="1000">${count === 0 ? '·' : count}</text>
+            `;
+          }
+        }
+      }
+
+      return out;
+    };
+
+    const renderTopCard = (x: number, y: number, w: number, h: number, stats: typeof posterData.negative) => {
+      const title = stats.type === 'positive' ? '建设财政部' : '震感应急部';
+      const accent = stats.type === 'positive' ? palette.emerald : palette.indigo;
+      const badge = stats.type === 'positive' ? 'BUILD' : 'SEISMIC';
+      const tip =
+        stats.type === 'positive'
+          ? '基建不是刷出来的，是一砖一瓦地把自己扶起来'
+          : '如果你又在21:00后崩：这是地缘政治，不是你的错';
+
+      const ringCx = x + w - 120;
+      const ringCy = y + 148;
+      const distX = x + cardPad;
+      const distY = y + 196;
+
+      return `
+        <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${cardR}" fill="${palette.card}" stroke="${palette.cardStroke}" />
+        <rect x="${x + cardPad}" y="${y + cardPad - 2}" width="6" height="22" rx="3" fill="${accent}" />
+        <text x="${x + cardPad + 14}" y="${y + cardPad + 14}" fill="${palette.textMain}" font-size="18" font-weight="1000">${escapeXml(title)}</text>
+        <text x="${x + w - cardPad}" y="${y + cardPad + 14}" text-anchor="end" fill="${palette.textDim}" font-size="12" font-weight="1000">${badge}</text>
+
+        <text x="${x + cardPad + 14}" y="${y + 78}" fill="${palette.textDim}" font-size="11" font-weight="900">总事件</text>
+        <text x="${x + cardPad + 14}" y="${y + 115}" fill="${palette.textMain}" font-size="44" font-weight="1100">${stats.total}</text>
+
+        <text x="${x + cardPad + 190}" y="${y + 78}" fill="${palette.textDim}" font-size="11" font-weight="900">日均</text>
+        <text x="${x + cardPad + 190}" y="${y + 115}" fill="${palette.textMain}" font-size="26" font-weight="1100">${stats.perDay.toFixed(1)}</text>
+        <text x="${x + cardPad + 252}" y="${y + 115}" fill="${palette.textDim}" font-size="12" font-weight="900">/天</text>
+
+        <text x="${x + cardPad + 190}" y="${y + 148}" fill="${palette.textDim}" font-size="11" font-weight="900">强度权重均值</text>
+        <text x="${x + cardPad + 190}" y="${y + 178}" fill="${palette.textMain}" font-size="22" font-weight="1100">${stats.avgIntensityWeight.toFixed(2)}</text>
+        <text x="${x + cardPad + 252}" y="${y + 178}" fill="${palette.textDim}" font-size="12" font-weight="900">/ 6</text>
+
+        <g>
+          ${renderCircadianRing(ringCx, ringCy, 42, 62, stats)}
+        </g>
+
+        <text x="${distX}" y="${distY - 10}" fill="${palette.textSub}" font-size="12" font-weight="1000">强度分布（L6→L1）</text>
+        <g>
+          ${renderDistributionBars(distX, distY, w - cardPad * 2, stats)}
+        </g>
+
+        <text x="${x + cardPad}" y="${y + h - 18}" fill="${palette.textDim}" font-size="11" font-weight="900">${escapeXml(tip)}</text>
+      `;
+    };
+
+    const poster = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+        <defs>
+          <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0b1220"/>
+            <stop offset="100%" stop-color="#050914"/>
+          </linearGradient>
+          <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="rgba(255,255,255,0.18)"/>
+            <stop offset="60%" stop-color="rgba(255,255,255,0.02)"/>
+            <stop offset="100%" stop-color="rgba(255,255,255,0.00)"/>
+          </linearGradient>
+          <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="rgba(0,0,0,0.45)"/>
+          </filter>
+        </defs>
+
+        <rect x="0" y="0" width="${W}" height="${H}" fill="url(#bgGrad)" />
+        <circle cx="${W - 120}" cy="120" r="220" fill="rgba(99,102,241,0.10)"/>
+        <circle cx="140" cy="${H - 120}" r="260" fill="rgba(16,185,129,0.10)"/>
+
+        <text x="${P}" y="${P + 34}" fill="${palette.textMain}" font-size="36" font-weight="1200" font-family="${fontFamily}">《国家地震与建设统计海报》</text>
+        <text x="${P}" y="${P + 70}" fill="${palette.textSub}" font-size="14" font-weight="1000" font-family="${fontFamily}">Seismo-Mind · Circadian Sovereignty & Tag Impact Matrix</text>
+        <text x="${P}" y="${P + 102}" fill="${palette.textDim}" font-size="13" font-weight="1000" font-family="${fontFamily}">${escapeXml(now.toLocaleString('zh-CN'))}</text>
+        <text x="${W - P}" y="${P + 102}" text-anchor="end" fill="${palette.textDim}" font-size="13" font-weight="1000" font-family="${fontFamily}">${escapeXml(slogan)}</text>
+
+        <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="rgba(255,255,255,0.06)" stroke="${palette.cardStroke}" filter="url(#softShadow)" />
+        <rect x="${P}" y="${topSectionY}" width="${innerW}" height="${topSectionH}" rx="${cardR}" fill="url(#shine)" />
+
+        <g font-family="${fontFamily}">
+          ${renderTopCard(leftX + 18, topSectionY + 18, columnW - 18, topSectionH - 36, posterData.negative)}
+          ${renderTopCard(rightX, topSectionY + 18, columnW - 18, topSectionH - 36, posterData.positive)}
+        </g>
+
+        <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="rgba(255,255,255,0.06)" stroke="${palette.cardStroke}" filter="url(#softShadow)" />
+        <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="url(#shine)" />
+        <g font-family="${fontFamily}">
+          ${renderHeatmap(P + 22, heatmapSectionY + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.negative, '震感标签×强度热力图（全量）')}
+          ${renderHeatmap(P + 22, heatmapSectionY + 22 + Math.floor((heatmapSectionH - 66) / 2) + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.positive, '建设标签×强度热力图（全量）')}
+          <text x="${P + 22}" y="${heatmapSectionY + heatmapSectionH - 18}" fill="${palette.textDim}" font-size="11" font-weight="900">注：颜色越深代表该标签在该强度出现越频繁。你不是脆弱，你是在高频训练神经系统。</text>
+          <text x="${W - P - 22}" y="${heatmapSectionY + heatmapSectionH - 18}" text-anchor="end" fill="${palette.textDim}" font-size="11" font-weight="900">© Seismo-Mind 智库 · 仅供自嘲与复盘</text>
+        </g>
+      </svg>
+    `;
+
+    return poster;
+  };
+
+  const exportPosterPng = async () => {
+    if (isExportingPoster) return;
+    setIsExportingPoster(true);
+    setPosterStatus('idle');
+    try {
+      const svg = buildPosterSvg();
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      const img = new Image();
+      const loaded = new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Image load failed'));
+      });
+      img.src = url;
+      await loaded;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1920;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('No canvas context');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const pngBlob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((b) => {
+          if (!b) reject(new Error('PNG encode failed'));
+          else resolve(b);
+        }, 'image/png');
+      });
+
+      const a = document.createElement('a');
+      const pngUrl = URL.createObjectURL(pngBlob);
+      a.href = pngUrl;
+      a.download = `seismo-poster-${new Date().toISOString().slice(0, 10)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(pngUrl);
+      URL.revokeObjectURL(url);
+      setPosterStatus('done');
+      setTimeout(() => setPosterStatus('idle'), 2500);
+    } catch (e) {
+      setPosterStatus('error');
+      setTimeout(() => setPosterStatus('idle'), 3000);
+    } finally {
+      setIsExportingPoster(false);
+    }
   };
 
   return (
@@ -201,6 +649,31 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             🏗️ 建设 (Build)
           </button>
         </div>
+      </div>
+
+      <div className="px-2 flex items-center justify-between">
+        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          海报导出会同时包含 震感 + 建设
+        </div>
+        <button
+          onClick={exportPosterPng}
+          disabled={isExportingPoster}
+          className={`px-4 py-2 rounded-xl text-[11px] font-black transition-all active:scale-95 ${
+            posterStatus === 'done'
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : posterStatus === 'error'
+              ? 'bg-rose-50 text-rose-700 border border-rose-200'
+              : 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
+          } ${isExportingPoster ? 'opacity-60 cursor-not-allowed' : ''}`}
+        >
+          {posterStatus === 'done'
+            ? '✅ 已导出'
+            : posterStatus === 'error'
+            ? '⚠️ 导出失败'
+            : isExportingPoster
+            ? '正在生成海报...'
+            : '🖼️ 导出统计海报'}
+        </button>
       </div>
 
       {/* Summary Cards */}
