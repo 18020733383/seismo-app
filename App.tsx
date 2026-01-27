@@ -50,18 +50,27 @@ function App() {
 
   // Handle visual Alarm Effects
   useEffect(() => {
-    if (currentLevel === IntensityLevel.Level1 || currentLevel === IntensityLevel.Level2) {
-        document.body.style.backgroundColor = '#1a0505';
-    } else if (currentLevel === IntensityLevel.Level3) {
-        document.body.style.backgroundColor = '#0f172a';
+    if (currentLogType === 'negative') {
+      if (currentLevel === IntensityLevel.Level1 || currentLevel === IntensityLevel.Level2) {
+          document.body.style.backgroundColor = '#1a0505';
+      } else if (currentLevel === IntensityLevel.Level3) {
+          document.body.style.backgroundColor = '#0f172a';
+      } else {
+          document.body.style.backgroundColor = '#f8fafc';
+      }
     } else {
-        document.body.style.backgroundColor = '#f8fafc';
+      // Positive levels background
+      if (currentLevel === IntensityLevel.Level1) {
+          document.body.style.backgroundColor = '#064e3b'; // Deep emerald
+      } else {
+          document.body.style.backgroundColor = '#f8fafc';
+      }
     }
     
     return () => {
         document.body.style.backgroundColor = '#f8fafc';
     }
-  }, [currentLevel]);
+  }, [currentLevel, currentLogType]);
 
   const handleLevelSelect = (level: IntensityLevel) => {
     setCurrentLevel(level);
@@ -130,10 +139,10 @@ function App() {
     : 'from-blue-200 to-white';
 
   return (
-    <div className={`min-h-screen transition-colors duration-1000 ${currentLevel === IntensityLevel.Level1 ? 'bg-black' : 'bg-slate-50'}`}>
+    <div className={`min-h-screen transition-colors duration-1000 ${(currentLevel === IntensityLevel.Level1 && currentLogType === 'negative') ? 'bg-black' : 'bg-slate-50'}`}>
       
-      {/* Level 1 Overlay Effects */}
-      {currentLevel === IntensityLevel.Level1 && (
+      {/* Level 1 Overlay Effects (Only for Negative) */}
+      {currentLevel === IntensityLevel.Level1 && currentLogType === 'negative' && (
          <div className="fixed inset-0 pointer-events-none z-50">
              <div className="absolute inset-0 bg-red-900 mix-blend-overlay opacity-50 animate-pulse"></div>
              <div className="scanlines opacity-30"></div>
@@ -151,10 +160,10 @@ function App() {
          <Lighthouse level={currentLevel} type={currentLogType} />
          
          <div className="absolute top-6 left-6 z-20">
-              <h1 className={`text-2xl font-black tracking-tight ${currentLevel === IntensityLevel.Level1 ? 'text-red-500' : 'text-slate-800'}`}>
+              <h1 className={`text-2xl font-black tracking-tight ${(currentLevel === IntensityLevel.Level1 && currentLogType === 'negative') ? 'text-red-500' : (currentLevel === IntensityLevel.Level1 && currentLogType === 'positive') ? 'text-emerald-600' : 'text-slate-800'}`}>
                 Seismo-Mind
               </h1>
-              <p className={`text-xs font-bold opacity-60 ${currentLevel === IntensityLevel.Level1 ? 'text-red-400' : 'text-slate-600'}`}>
+              <p className={`text-xs font-bold opacity-60 ${(currentLevel === IntensityLevel.Level1 && currentLogType === 'negative') ? 'text-red-400' : (currentLevel === IntensityLevel.Level1 && currentLogType === 'positive') ? 'text-emerald-500' : 'text-slate-600'}`}>
                 心理震感记录仪
               </p>
            </div>

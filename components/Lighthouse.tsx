@@ -17,8 +17,7 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level, type = 'negative'
   
   // Positive Animation States
   const isConstruction = isPositive && (level === IntensityLevel.Level6 || level === IntensityLevel.Level5);
-  const isCompleted = isPositive && level === IntensityLevel.Level4;
-  const isCelebration = isPositive && (level === IntensityLevel.Level3 || level === IntensityLevel.Level2 || level === IntensityLevel.Level1);
+  const isCelebration = isPositive && (level === IntensityLevel.Level4 || level === IntensityLevel.Level3 || level === IntensityLevel.Level2 || level === IntensityLevel.Level1);
   const isMiracle = isPositive && level === IntensityLevel.Level1;
 
   const skyColor = isPositive
@@ -39,6 +38,20 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level, type = 'negative'
         ? 'rgba(255, 100, 0, 0.6)'
         : 'rgba(255, 255, 200, 0.5)';
 
+  // Jumping People for Celebration
+  const getPeopleCount = () => {
+    if (!isCelebration || !level) return 0;
+    switch(level) {
+      case IntensityLevel.Level1: return 18;
+      case IntensityLevel.Level2: return 12;
+      case IntensityLevel.Level3: return 8;
+      case IntensityLevel.Level4: return 4;
+      default: return 0;
+    }
+  };
+
+  const peopleCount = getPeopleCount();
+
   return (
     <div className={`relative w-full h-64 md:h-80 transition-all duration-700 overflow-hidden rounded-b-[3rem] 
       ${isExtremeShaking ? 'animate-shake-extreme' : isShaking ? 'animate-shake' : isMildShaking ? 'animate-shake-mild' : ''}`}>
@@ -53,13 +66,101 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level, type = 'negative'
               : level === IntensityLevel.Level1 ? 'fill-red-600 blur-sm' : 'fill-yellow-100 opacity-80'
          }`} />
          
-         {/* Clouds / Fireworks */}
-         {isMiracle ? (
-             // Fireworks for Level 1 Positive
+         {/* Confetti / Ribbons for high positive levels (Level 1-3) */}
+         {isCelebration && level && level <= IntensityLevel.Level3 && (
+           <g>
+             {[...Array(30)].map((_, i) => (
+               <rect
+                 key={`confetti-${i}`}
+                 x={`${Math.random() * 100}%`}
+                 y="-10"
+                 width="3"
+                 height="8"
+                 fill={['#fbbf24', '#34d399', '#60a5fa', '#f87171', '#a78bfa', '#fb7185'][i % 6]}
+                 opacity="0.8"
+               >
+                 <animateTransform
+                   attributeName="transform"
+                   type="translate"
+                   from={`0 -10`}
+                   to={`0 400`}
+                   dur={`${2 + Math.random() * 2}s`}
+                   repeatCount="indefinite"
+                 />
+                 <animateTransform
+                   attributeName="transform"
+                   type="rotate"
+                   from="0"
+                   to="360"
+                   dur={`${1 + Math.random() * 1.5}s`}
+                   repeatCount="indefinite"
+                   additive="sum"
+                 />
+               </rect>
+             ))}
+           </g>
+         )}
+
+         {/* Clouds / Fireworks (Level 1-2) */}
+         {isCelebration && level && level <= IntensityLevel.Level2 ? (
+             // Enhanced Fireworks for Top Positive Levels
              <g>
-                <circle cx="20%" cy="30%" r="2" fill="yellow" className="animate-ping" style={{ animationDuration: '1s' }} />
-                <circle cx="80%" cy="40%" r="3" fill="orange" className="animate-ping" style={{ animationDuration: '1.5s', animationDelay: '0.5s' }} />
-                <circle cx="50%" cy="20%" r="4" fill="red" className="animate-ping" style={{ animationDuration: '2s', animationDelay: '1s' }} />
+                {[...Array(level === IntensityLevel.Level1 ? 15 : 8)].map((_, i) => {
+                  const x = 10 + Math.random() * 80;
+                  const y = 10 + Math.random() * 50;
+                  const color = ['#fbbf24', '#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899'][i % 6];
+                  return (
+                    <g key={`firework-group-${i}`}>
+                      {/* Central Flash */}
+                      <circle 
+                        cx={`${x}%`} 
+                        cy={`${y}%`} 
+                        r="2" 
+                        fill={color}
+                        className="animate-ping" 
+                        style={{ 
+                          animationDuration: `${0.8 + Math.random()}s`, 
+                          animationDelay: `${Math.random() * 3}s` 
+                        }} 
+                      />
+                      {/* Burst Particles */}
+                      {[...Array(6)].map((_, j) => (
+                        <circle
+                          key={`burst-${i}-${j}`}
+                          cx={`${x}%`}
+                          cy={`${y}%`}
+                          r="1"
+                          fill={color}
+                        >
+                          <animate
+                            attributeName="cx"
+                            from={`${x}%`}
+                            to={`${x + (Math.random() - 0.5) * 15}%`}
+                            dur="1s"
+                            begin={`${Math.random() * 3}s`}
+                            repeatCount="indefinite"
+                          />
+                          <animate
+                            attributeName="cy"
+                            from={`${y}%`}
+                            to={`${y + (Math.random() - 0.5) * 15}%`}
+                            dur="1s"
+                            begin={`${Math.random() * 3}s`}
+                            repeatCount="indefinite"
+                          />
+                          <animate
+                            attributeName="opacity"
+                            from="1"
+                            to="0"
+                            dur="1s"
+                            begin={`${Math.random() * 3}s`}
+                            repeatCount="indefinite"
+                          />
+                        </circle>
+                      ))}
+                    </g>
+                  );
+                })}
              </g>
          ) : (
              <g className={`transition-transform duration-[10s] ${isStormy ? 'translate-x-10' : 'translate-x-0'}`}>
@@ -125,8 +226,21 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level, type = 'negative'
              <div className={`w-full h-full bg-yellow-200 opacity-50 ${level === IntensityLevel.Level1 && !isPositive ? 'bg-red-500 animate-pulse' : ''}`}></div>
           </div>
           
-          {/* Balcony */}
-          <div className="w-20 h-4 bg-slate-800 rounded-full z-10 relative -mt-1"></div>
+          {/* Balcony & Jumping People on Balcony */}
+          <div className="w-20 h-4 bg-slate-800 rounded-full z-10 relative -mt-1 flex justify-center items-end">
+             {isCelebration && (
+               <div className="absolute -top-4 flex gap-1 items-end px-2">
+                 {[...Array(Math.min(peopleCount, 6))].map((_, i) => (
+                   <div key={`balcony-person-${i}`} className="w-1 bg-yellow-400 rounded-t-full animate-bounce"
+                        style={{ 
+                          height: `${6 + Math.random() * 4}px`, 
+                          animationDuration: `${0.3 + Math.random() * 0.3}s`,
+                          animationDelay: `${Math.random()}s` 
+                        }}></div>
+                 ))}
+               </div>
+             )}
+          </div>
           
           {/* Tower Body */}
           <div className="w-16 h-40 bg-white relative z-10 flex flex-col items-center justify-around py-4" 
@@ -136,50 +250,22 @@ export const Lighthouse: React.FC<LighthouseProps> = ({ level, type = 'negative'
              <div className={`w-full h-4 opacity-80 ${isPositive ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
           </div>
 
-          {/* Base */}
-          <div className="w-24 h-12 bg-slate-800 rounded-t-lg z-10 relative -mt-2"></div>
+          {/* Base & Jumping People on Base */}
+          <div className="w-24 h-12 bg-slate-800 rounded-t-lg z-10 relative -mt-2 flex justify-center items-start pt-1">
+             {isCelebration && (
+               <div className="absolute -top-5 w-full flex justify-around items-end px-1">
+                 {[...Array(Math.max(0, peopleCount - 6))].map((_, i) => (
+                   <div key={`base-person-${i}`} className="w-1.5 bg-yellow-500 rounded-t-full animate-bounce"
+                        style={{ 
+                          height: `${10 + Math.random() * 8}px`, 
+                          animationDuration: `${0.4 + Math.random() * 0.4}s`,
+                          animationDelay: `${Math.random()}s` 
+                        }}></div>
+                 ))}
+               </div>
+             )}
+          </div>
        </div>
-
-       {/* Jumping People for Celebration */}
-       {isCelebration && (
-         <div className="absolute bottom-0 w-full flex justify-center items-end gap-2 z-30 pb-2 px-10">
-            {/* Left Crowd */}
-            <div className="flex gap-1 items-end">
-                {[...Array(6)].map((_, i) => (
-                    <div key={`l-${i}`} className="w-1.5 bg-slate-800 rounded-t-full animate-bounce" 
-                         style={{ 
-                             height: `${8 + Math.random() * 8}px`, 
-                             animationDuration: `${0.6 + Math.random() * 0.4}s`,
-                             animationDelay: `${Math.random()}s` 
-                         }}></div>
-                ))}
-            </div>
-
-            {/* Center Crowd (closer to lighthouse) */}
-            <div className="flex gap-1.5 items-end mx-4">
-                {[...Array(5)].map((_, i) => (
-                    <div key={`c-${i}`} className="w-2 bg-yellow-500 rounded-t-full animate-bounce" 
-                         style={{ 
-                             height: `${12 + Math.random() * 6}px`, 
-                             animationDuration: `${0.5 + Math.random() * 0.3}s`,
-                             animationDelay: `${Math.random()}s` 
-                         }}></div>
-                ))}
-            </div>
-
-            {/* Right Crowd */}
-            <div className="flex gap-1 items-end">
-                {[...Array(6)].map((_, i) => (
-                    <div key={`r-${i}`} className="w-1.5 bg-slate-800 rounded-t-full animate-bounce" 
-                         style={{ 
-                             height: `${8 + Math.random() * 8}px`, 
-                             animationDuration: `${0.6 + Math.random() * 0.4}s`,
-                             animationDelay: `${Math.random()}s` 
-                         }}></div>
-                ))}
-            </div>
-         </div>
-       )}
 
        {/* Ocean / Waves */}
        <div className="absolute bottom-0 w-full h-16 z-20 overflow-hidden">
