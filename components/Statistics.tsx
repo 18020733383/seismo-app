@@ -10,6 +10,7 @@ type RangeType = 3 | 7 | 30 | 365;
 export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
   const [range, setRange] = useState<RangeType>(7);
   const [statsType, setStatsType] = useState<LogType>('negative');
+  const [hoveredHour, setHoveredHour] = useState<number | null>(null);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => (log.type || 'negative') === statsType);
@@ -86,45 +87,92 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
 
   const maxTagCount = Math.max(...Object.values(tagCounts), 1);
 
-  // 4. Tag Intensity Heatmap Processing
-  const tagIntensityMap: Record<string, { totalIntensity: number; count: number }> = {};
-  filteredLogs.forEach(log => {
-    const intensityVal = 7 - log.intensity; // L1=6, L6=1
-    (log.tags || []).forEach(tag => {
-      if (!tagIntensityMap[tag]) {
-        tagIntensityMap[tag] = { totalIntensity: 0, count: 0 };
+  const tagHeatmapLevels = useMemo(() => {
+    return [
+      IntensityLevel.Level6,
+      IntensityLevel.Level5,
+      IntensityLevel.Level4,
+      IntensityLevel.Level3,
+      IntensityLevel.Level2,
+      IntensityLevel.Level1,
+    ];
+  }, []);
+
+  const tagHeatmap = useMemo(() => {
+    const counts: Record<string, Record<number, number>> = {};
+    for (const log of filteredLogs) {
+      for (const tag of log.tags || []) {
+        if (!counts[tag]) counts[tag] = {};
+        counts[tag][log.intensity] = (counts[tag][log.intensity] || 0) + 1;
       }
-      tagIntensityMap[tag].totalIntensity += intensityVal;
-      tagIntensityMap[tag].count += 1;
+    }
+
+    const tags = Object.keys(counts).sort((a, b) => {
+      const sumA = tagHeatmapLevels.reduce((sum, level) => sum + (counts[a]?.[level] || 0), 0);
+      const sumB = tagHeatmapLevels.reduce((sum, level) => sum + (counts[b]?.[level] || 0), 0);
+      return sumB - sumA;
     });
-  });
 
-  const tagHeatmapData = Object.entries(tagIntensityMap)
-    .map(([tag, data]) => ({
-      tag,
-      avgIntensity: data.totalIntensity / data.count,
-      totalIntensity: data.totalIntensity,
-      count: data.count
-    }))
-    .sort((a, b) => b.totalIntensity - a.totalIntensity)
-    .slice(0, 12);
+    let maxCell = 0;
+    for (const tag of tags) {
+      for (const level of tagHeatmapLevels) {
+        maxCell = Math.max(maxCell, counts[tag]?.[level] || 0);
+      }
+    }
 
-  const maxTagIntensity = Math.max(...tagHeatmapData.map(d => d.totalIntensity), 1);
+    return { tags, counts, maxCell };
+  }, [filteredLogs, tagHeatmapLevels]);
 
-  // 5. Circadian Distribution Processing (Golden Cycle)
-  const circadianData = Array.from({ length: 24 }, () => 0);
-  filteredLogs.forEach(log => {
-    const hour = new Date(log.timestamp).getHours();
-    circadianData[hour]++;
-  });
-
-  const maxCircadianCount = Math.max(...circadianData, 1);
+  const circadian = useMemo(() => {
+    const hours = Array.from({ length: 24 }, () => 0);
+    for (const log of filteredLogs) {
+      const h = new Date(log.timestamp).getHours();
+      hours[h] += 1;
+    }
+    const max = Math.max(...hours, 1);
+    const total = hours.reduce((sum, c) => sum + c, 0);
+    return { hours, max, total };
+  }, [filteredLogs]);
 
   // Helper for colors
   const isPositive = statsType === 'positive';
   const activeColor = isPositive ? 'bg-emerald-500' : 'bg-blue-500';
   const activeTextColor = isPositive ? 'text-emerald-600' : 'text-blue-600';
   const barColor = isPositive ? 'bg-emerald-400' : 'bg-blue-400';
+
+  const getColorRgba = (count: number, max: number) => {
+    const maxSafe = Math.max(max, 1);
+    const ratio = Math.min(Math.max(count / maxSafe, 0), 1);
+    const alpha = count === 0 ? 0.06 : 0.08 + ratio * 0.92;
+    const base = isPositive ? { r: 16, g: 185, b: 129 } : { r: 99, g: 102, b: 241 };
+    return `rgba(${base.r},${base.g},${base.b},${alpha})`;
+  };
+
+  const polarToCartesian = (cx: number, cy: number, r: number, angleRad: number) => {
+    return { x: cx + r * Math.cos(angleRad), y: cy + r * Math.sin(angleRad) };
+  };
+
+  const describeRingSegment = (
+    cx: number,
+    cy: number,
+    innerR: number,
+    outerR: number,
+    startAngleRad: number,
+    endAngleRad: number
+  ) => {
+    const largeArcFlag = endAngleRad - startAngleRad > Math.PI ? 1 : 0;
+    const p1o = polarToCartesian(cx, cy, outerR, startAngleRad);
+    const p2o = polarToCartesian(cx, cy, outerR, endAngleRad);
+    const p2i = polarToCartesian(cx, cy, innerR, endAngleRad);
+    const p1i = polarToCartesian(cx, cy, innerR, startAngleRad);
+    return [
+      `M ${p1o.x} ${p1o.y}`,
+      `A ${outerR} ${outerR} 0 ${largeArcFlag} 1 ${p2o.x} ${p2o.y}`,
+      `L ${p2i.x} ${p2i.y}`,
+      `A ${innerR} ${innerR} 0 ${largeArcFlag} 0 ${p1i.x} ${p1i.y}`,
+      'Z',
+    ].join(' ');
+  };
 
   return (
     <div className="space-y-6 pb-10">
@@ -177,6 +225,73 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
             <span className="text-xs text-slate-400 font-medium">次/天</span>
           </div>
         </div>
+      </div>
+
+      {/* Circadian Distribution */}
+      <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
+        <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+          <div className={`w-1.5 h-4 ${isPositive ? 'bg-emerald-500' : 'bg-indigo-500'} rounded-full`}></div>
+          黄金周期分布图 (Circadian Sovereignty Distribution)
+        </h3>
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-5">
+          00:00-23:59 · 看看你的“主权沦陷”是否有规律
+        </p>
+        {circadian.total > 0 ? (
+          <div className="relative flex justify-center">
+            <svg width="260" height="260" viewBox="0 0 260 260" className="drop-shadow-sm">
+              <defs>
+                <filter id="circadianGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <circle cx="130" cy="130" r="108" fill="rgba(255,255,255,0.4)" stroke="rgba(148,163,184,0.35)" strokeWidth="1" />
+              {circadian.hours.map((count, hour) => {
+                const start = (hour / 24) * Math.PI * 2 - Math.PI / 2;
+                const end = ((hour + 1) / 24) * Math.PI * 2 - Math.PI / 2;
+                const path = describeRingSegment(130, 130, 78, 108, start, end);
+                const fill = getColorRgba(count, circadian.max);
+                return (
+                  <path
+                    key={hour}
+                    d={path}
+                    fill={fill}
+                    stroke="rgba(255,255,255,0.85)"
+                    strokeWidth={0.8}
+                    filter="url(#circadianGlow)"
+                    onMouseEnter={() => setHoveredHour(hour)}
+                    onMouseLeave={() => setHoveredHour(null)}
+                    className="cursor-pointer transition-all"
+                  />
+                );
+              })}
+              <text x="130" y="18" textAnchor="middle" fill="rgba(100,116,139,0.8)" fontSize="10" fontWeight="700">00</text>
+              <text x="242" y="134" textAnchor="middle" fill="rgba(100,116,139,0.8)" fontSize="10" fontWeight="700">06</text>
+              <text x="130" y="252" textAnchor="middle" fill="rgba(100,116,139,0.8)" fontSize="10" fontWeight="700">12</text>
+              <text x="18" y="134" textAnchor="middle" fill="rgba(100,116,139,0.8)" fontSize="10" fontWeight="700">18</text>
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {hoveredHour === null
+                  ? '今日主权概览'
+                  : `${String(hoveredHour).padStart(2, '0')}:00 - ${String((hoveredHour + 1) % 24).padStart(2, '0')}:00`}
+              </div>
+              <div className={`text-3xl font-black ${activeTextColor}`}>
+                {hoveredHour === null ? circadian.total : circadian.hours[hoveredHour]}
+              </div>
+              <div className="text-[10px] font-bold text-slate-400">
+                {hoveredHour === null ? `总${isPositive ? '建设' : '沦陷'}事件` : `该时段${isPositive ? '建设' : '沦陷'}次数`}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <p className="text-xs text-slate-400">暂无数据，国家暂未发生“主权事件”</p>
+          </div>
+        )}
       </div>
 
       {/* Distribution Bar Chart */}
@@ -409,127 +524,6 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
         </div>
       </div>
 
-      {/* Tag Intensity Heatmap */}
-      <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
-        <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
-          <div className={`w-1.5 h-4 ${isPositive ? 'bg-orange-500' : 'bg-red-500'} rounded-full`}></div>
-          {isPositive ? '建设贡献热力图' : '震感触发源热力图'} (Top 12)
-        </h3>
-        {tagHeatmapData.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3">
-            {tagHeatmapData.map((data, index) => {
-              const intensityRatio = data.totalIntensity / maxTagIntensity;
-              return (
-                <div key={data.tag} className="bg-white/60 rounded-xl p-3 flex flex-col gap-2 border border-white/50 relative overflow-hidden group">
-                  <div 
-                    className={`absolute bottom-0 left-0 h-1 transition-all duration-1000 ${
-                      isPositive ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-gradient-to-r from-rose-400 to-red-600'
-                    }`} 
-                    style={{ width: `${intensityRatio * 100}%` }}
-                  ></div>
-                  <div className="flex justify-between items-start z-10">
-                    <span className="text-xs font-black text-slate-700 truncate">#{data.tag}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-lg ${
-                      isPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-                    }`}>
-                      {data.totalIntensity.toFixed(0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center z-10">
-                     <span className="text-[10px] text-slate-400">平均强度: {(7 - data.avgIntensity).toFixed(1)}</span>
-                     <span className="text-[10px] text-slate-400">{data.count}次</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-xs text-slate-400">暂无足够数据生成热力图</p>
-          </div>
-        )}
-      </div>
-
-      {/* Circadian Sovereignty Distribution (Golden Cycle) */}
-      <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
-        <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
-          <div className={`w-1.5 h-4 ${isPositive ? 'bg-purple-500' : 'bg-slate-800'} rounded-full`}></div>
-          黄金周期分布 (24H)
-        </h3>
-        <div className="relative w-full aspect-square max-w-[300px] mx-auto">
-          {/* Clock Face Background */}
-          <div className="absolute inset-0 rounded-full border-4 border-slate-100 bg-white/30 backdrop-blur-sm shadow-inner">
-             {/* Hour Markers */}
-             {[0, 3, 6, 9, 12, 15, 18, 21].map(hour => {
-               const angle = (hour / 24) * 360 - 90;
-               const radius = 50; // percentage
-               const x = 50 + radius * 0.85 * Math.cos(angle * Math.PI / 180);
-               const y = 50 + radius * 0.85 * Math.sin(angle * Math.PI / 180);
-               return (
-                 <div 
-                   key={hour} 
-                   className="absolute text-[10px] font-bold text-slate-400 transform -translate-x-1/2 -translate-y-1/2"
-                   style={{ left: `${x}%`, top: `${y}%` }}
-                 >
-                   {hour}:00
-                 </div>
-               );
-             })}
-          </div>
-          
-          {/* Radar/Pie Segments */}
-          <svg className="absolute inset-0 w-full h-full transform -rotate-90 overflow-visible">
-            {circadianData.map((count, hour) => {
-               if (count === 0) return null;
-               const angleSlice = (2 * Math.PI) / 24;
-               const startAngle = hour * angleSlice;
-               const endAngle = (hour + 1) * angleSlice;
-               const innerRadius = 20; // Center hole percentage
-               const maxRadius = 45;   // Max reach percentage
-               const valueRadius = innerRadius + (count / maxCircadianCount) * (maxRadius - innerRadius);
-               
-               // Calculate path coordinates
-               const x1 = 50 + innerRadius * Math.cos(startAngle);
-               const y1 = 50 + innerRadius * Math.sin(startAngle);
-               const x2 = 50 + valueRadius * Math.cos(startAngle);
-               const y2 = 50 + valueRadius * Math.sin(startAngle);
-               const x3 = 50 + valueRadius * Math.cos(endAngle);
-               const y3 = 50 + valueRadius * Math.sin(endAngle);
-               const x4 = 50 + innerRadius * Math.cos(endAngle);
-               const y4 = 50 + innerRadius * Math.sin(endAngle);
-
-               return (
-                 <path
-                   key={hour}
-                   d={`M ${x1} ${y1} L ${x2} ${y2} A ${valueRadius} ${valueRadius} 0 0 1 ${x3} ${y3} L ${x4} ${y4} A ${innerRadius} ${innerRadius} 0 0 0 ${x1} ${y1} Z`}
-                   fill={isPositive ? '#10b981' : '#f43f5e'}
-                   fillOpacity={0.2 + (count / maxCircadianCount) * 0.6}
-                   stroke="white"
-                   strokeWidth="0.5"
-                   className="transition-all duration-700 hover:opacity-100 cursor-pointer"
-                 >
-                   <title>{hour}:00 - {hour}:59 : {count}次</title>
-                 </path>
-               );
-            })}
-            
-            {/* Center Label */}
-            <circle cx="50" cy="50" r="18" fill="white" className="shadow-sm" />
-          </svg>
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-             <div className="text-center">
-               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">高峰</div>
-               <div className={`text-xl font-black ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                 {circadianData.indexOf(maxCircadianCount)}:00
-               </div>
-             </div>
-          </div>
-        </div>
-        <p className="text-[10px] text-center text-slate-400 mt-4">
-          * 颜色越深代表该时段发生的{isPositive ? '建设' : '震感'}频率越高，用于发现您的“主权沦陷”规律
-        </p>
-      </div>
-
       {/* Tag Cloud / Distribution */}
       <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
         <h3 className="text-sm font-bold text-slate-700 mb-6 flex items-center gap-2">
@@ -560,6 +554,70 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
         ) : (
           <div className="text-center py-4">
             <p className="text-xs text-slate-400">暂无标签记录，在记录震感时添加 #标签 即可看到分布</p>
+          </div>
+        )}
+      </div>
+
+      {/* Tag x Intensity Heatmap */}
+      <div className="glass-panel mx-2 p-6 rounded-3xl shadow-lg border border-white/50 bg-white/40">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+            <div className={`w-1.5 h-4 ${isPositive ? 'bg-emerald-500' : 'bg-indigo-500'} rounded-full`}></div>
+            标签 × 强度热力图 (L6→L1)
+          </h3>
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            哪些标签触动最大
+          </div>
+        </div>
+        {tagHeatmap.tags.length > 0 ? (
+          <div className="mt-4 overflow-auto rounded-2xl border border-white/70 bg-white/50">
+            <div className="min-w-[560px]">
+              <div className="grid grid-cols-[220px_repeat(6,minmax(0,1fr))] sticky top-0 bg-white/80 backdrop-blur border-b border-slate-100">
+                <div className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">标签</div>
+                {tagHeatmapLevels.map(level => (
+                  <div key={level} className="px-2 py-3 text-center text-[10px] font-black text-slate-500">
+                    L{level}
+                  </div>
+                ))}
+              </div>
+              <div className="divide-y divide-slate-100/70">
+                {tagHeatmap.tags.map(tag => (
+                  <div key={tag} className="grid grid-cols-[220px_repeat(6,minmax(0,1fr))]">
+                    <div className="px-4 py-3 flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-700">#{tag}</span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {tagHeatmapLevels.reduce((sum, level) => sum + (tagHeatmap.counts[tag]?.[level] || 0), 0)}
+                      </span>
+                    </div>
+                    {tagHeatmapLevels.map(level => {
+                      const count = tagHeatmap.counts[tag]?.[level] || 0;
+                      const bg = getColorRgba(count, tagHeatmap.maxCell);
+                      const text =
+                        count === 0
+                          ? 'text-slate-300'
+                          : count / Math.max(tagHeatmap.maxCell, 1) >= 0.6
+                          ? 'text-white'
+                          : 'text-slate-700';
+                      return (
+                        <div key={`${tag}-${level}`} className="p-2">
+                          <div
+                            className={`h-10 rounded-xl flex items-center justify-center font-black text-xs border border-white/60 shadow-sm ${text}`}
+                            style={{ backgroundColor: bg }}
+                            title={`#${tag} · L${level} · ${count} 次`}
+                          >
+                            {count === 0 ? '·' : count}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <p className="text-xs text-slate-400">暂无标签数据，先在记录里加几个 #标签 吧</p>
           </div>
         )}
       </div>
