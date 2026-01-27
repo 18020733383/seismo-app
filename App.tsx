@@ -96,19 +96,26 @@ function App() {
     };
 
     // Optimistic update
+    const previousLogs = [...logs];
     setLogs([newLog, ...logs]);
     setIsInputting(false);
     setCurrentLevel(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
-      await fetch('/api/logs', {
+      const response = await fetch('/api/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newLog),
       });
+      
+      if (!response.ok) {
+        throw new Error("Failed to save to server");
+      }
     } catch (e) {
-      console.error("Failed to sync log to server");
+      console.error("Failed to sync log to server:", e);
+      alert("同步失败！可能是数据库结构未更新，请联系管理员执行迁移脚本。");
+      setLogs(previousLogs); // Revert optimistic update
     }
   };
 
@@ -144,7 +151,7 @@ function App() {
       {/* Level 1 Overlay Effects (Only for Negative) */}
       {currentLevel === IntensityLevel.Level1 && currentLogType === 'negative' && (
          <div className="fixed inset-0 pointer-events-none z-50">
-             <div className="absolute inset-0 bg-red-900 mix-blend-overlay opacity-50 animate-pulse"></div>
+             <div className="absolute inset-0 bg-red-900 mix-blend-overlay opacity-70 animate-pulse"></div>
              <div className="scanlines opacity-30"></div>
              <div className="absolute top-10 left-0 w-full text-center">
                 <h1 className="text-6xl font-black text-red-600 opacity-20 animate-ping">WARNING</h1>
