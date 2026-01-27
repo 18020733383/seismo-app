@@ -6,6 +6,7 @@ import { HistoryList } from './components/HistoryList';
 import { IntensityLevel, SeismicLog, LevelConfig, PositiveLevelConfig, LogType } from './types';
 import { Statistics } from './components/Statistics';
 import { Parliament } from './components/Parliament';
+import { Whitepaper } from './components/Whitepaper';
 import Settings from './components/Settings';
 
 // Simple UUID generator
@@ -16,7 +17,7 @@ function App() {
   const [currentLevel, setCurrentLevel] = useState<IntensityLevel | null>(null);
   const [currentLogType, setCurrentLogType] = useState<LogType>('negative');
   const [isInputting, setIsInputting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'home' | 'logs' | 'stats' | 'parliament' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'logs' | 'stats' | 'parliament' | 'whitepaper' | 'settings'>('home');
   const [isLoading, setIsLoading] = useState(true);
 
   // Load from API
@@ -249,6 +250,10 @@ function App() {
                   <h2 className="text-xl font-bold text-slate-800 mb-4 px-2">议会构成</h2>
                   <Parliament logs={logs} />
                 </div>
+              ) : activeTab === 'whitepaper' ? (
+                <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <Whitepaper logs={logs} />
+                </div>
               ) : (
                 <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <Settings />
@@ -304,6 +309,17 @@ function App() {
               </div>
               <span className={`text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'parliament' ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-0.5'}`}>议会</span>
               {activeTab === 'parliament' && <div className="absolute bottom-2 w-1 h-1 bg-blue-600 rounded-full"></div>}
+            </button>
+
+            <button 
+              onClick={() => setActiveTab('whitepaper')}
+              className={`flex-1 flex flex-col items-center justify-center gap-1.5 transition-all duration-300 relative ${activeTab === 'whitepaper' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              <div className={`p-2 rounded-xl transition-all duration-300 ${activeTab === 'whitepaper' ? 'bg-blue-50 animate-nav-pop' : ''}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill={activeTab === 'whitepaper' ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="transition-transform duration-300"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-widest transition-all ${activeTab === 'whitepaper' ? 'opacity-100 translate-y-0' : 'opacity-60 translate-y-0.5'}`}>报告</span>
+              {activeTab === 'whitepaper' && <div className="absolute bottom-2 w-1 h-1 bg-blue-600 rounded-full"></div>}
             </button>
 
             <button 
