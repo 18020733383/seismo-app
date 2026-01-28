@@ -24,6 +24,7 @@ interface SummaryData {
 
 const MODELS = [
   'google-ai-studio/gemini-2.0-flash',
+  'google-ai-studio/gemini-3-flash-preview',
   'google-ai-studio/gemini-1.5-flash',
   'google-ai-studio/gemini-1.5-pro',
 ];
@@ -31,12 +32,14 @@ const MODELS = [
 const Settings: React.FC = () => {
   const [config, setConfig] = useState<GeminiConfig>({
     apiKey: '',
-    model: 'google-ai-studio/gemini-1.5-flash',
+    model: 'google-ai-studio/gemini-2.0-flash',
   });
   const [isSaved, setIsSaved] = useState(false);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
   const [availableModels, setAvailableModels] = useState<string[]>(MODELS);
   const [error, setError] = useState<string | null>(null);
+  const [customModel, setCustomModel] = useState('');
+  const [isCustom, setIsCustom] = useState(false);
 
   useEffect(() => {
     // 优先从 D1 加载配置
@@ -46,10 +49,17 @@ const Settings: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           if (data.hasKey) {
+            const model = data.model || 'google-ai-studio/gemini-2.0-flash';
             setConfig({
               apiKey: data.apiKey, // 这是脱敏后的 key，仅用于显示
-              model: data.model || 'google-ai-studio/gemini-1.5-flash'
+              model: model
             });
+            
+            // 如果加载的模型不在预设列表中，开启自定义模式
+            if (!MODELS.includes(model)) {
+              setIsCustom(true);
+              setCustomModel(model);
+            }
           }
         }
       } catch (e) {
@@ -78,7 +88,9 @@ const Settings: React.FC = () => {
       const models = await res.json();
       const modelNames = models.map((m: any) => m.name);
       setAvailableModels(modelNames);
-      if (modelNames.length > 0 && !modelNames.includes(config.model)) {
+      
+      // 更新可选列表，但不强制切换当前选中的模型（除非当前模型完全失效）
+      if (modelNames.length > 0 && !modelNames.includes(config.model) && !isCustom) {
         setConfig(prev => ({ ...prev, model: modelNames[0] }));
       }
     } catch (e: any) {
@@ -89,43 +101,27 @@ const Settings: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!config.apiKey || !config.model) {
-      setError('请输入 API Key 并选择模型');
+    const finalModel = isCustom ? customModel : config.model;
+    if (!config.apiKey || !finalModel) {
+      setError('请输入 API Key 并选择或输入模型');
       return;
     }
 
-    // 如果 key 包含 ... 说明没改过，不需要重复保存（或者后端处理）
-    // 但为了保险，如果用户改了 key，我们就保存
-    if (config.apiKey.includes('...')) {
-      // 这种情况下只更新模型
-      try {
-        const res = await fetch('/api/config/gemini', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            apiKey: 'KEEP_EXISTING', // 特殊标识告知后端保留原 key
-            model: config.model 
-          })
-        });
-        if (res.ok) {
-          setIsSaved(true);
-          setTimeout(() => setIsSaved(false), 2000);
-        }
-      } catch (e) {
-        setError('保存失败');
-      }
-      return;
-    }
+    const payload = {
+      apiKey: config.apiKey.includes('...') ? 'KEEP_EXISTING' : config.apiKey,
+      model: finalModel
+    };
 
     try {
       const res = await fetch('/api/config/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
         setIsSaved(true);
         setError(null);
+        setConfig(prev => ({ ...prev, model: finalModel }));
         setTimeout(() => setIsSaved(false), 2000);
       } else {
         const data = await res.json();
@@ -172,16 +168,38 @@ const Settings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase mb-1.5 ml-1">模型选择</label>
-              <select
-                value={config.model}
-                onChange={(e) => setConfig({ ...config, model: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium appearance-none"
-              >
-                {availableModels.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+              <div className="flex justify-between items-center mb-1.5 ml-1">
+                <label className="block text-[10px] font-black text-slate-400 uppercase">模型选择</label>
+                <button 
+                  onClick={() => setIsCustom(!isCustom)}
+                  className="text-[10px] font-black text-indigo-500 uppercase hover:text-indigo-600 transition-colors"
+                >
+                  {isCustom ? '选择预设' : '手动输入'}
+                </button>
+              </div>
+              
+              {isCustom ? (
+                <input
+                  type="text"
+                  value={customModel}
+                  onChange={(e) => setCustomModel(e.target.value)}
+                  placeholder="例如: google-ai-studio/gemini-3-flash-preview"
+                  className="w-full px-4 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium"
+                />
+              ) : (
+                <select
+                  value={config.model}
+                  onChange={(e) => setConfig({ ...config, model: e.target.value })}
+                  className="w-full px-4 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium appearance-none"
+                >
+                  {availableModels.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              )}
+              <p className="mt-1.5 ml-1 text-[9px] text-slate-400 font-medium">
+                * 使用 Cloudflare AI Gateway 时，模型名称需包含前缀 (如 google-ai-studio/)
+              </p>
             </div>
 
             {error && (

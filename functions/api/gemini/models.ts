@@ -31,6 +31,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       { name: "google-ai-studio/gemini-1.5-flash", displayName: "Gemini 1.5 Flash" },
       { name: "google-ai-studio/gemini-1.5-pro", displayName: "Gemini 1.5 Pro" },
       { name: "google-ai-studio/gemini-1.5-flash-8b", displayName: "Gemini 1.5 Flash-8B" },
+      { name: "google-ai-studio/gemini-3-flash-preview", displayName: "Gemini 3 Flash Preview" },
     ];
 
     return new Response(JSON.stringify(models), {
