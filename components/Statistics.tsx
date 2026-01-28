@@ -411,18 +411,18 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       const availH = Math.max(10, h - headerHLocal);
 
       let cols = 1;
-      let cell = 22;
-      let labelW = 80;
-      let rowH = 24;
+      let cell = 18;
+      let labelW = 60;
+      let rowH = 20;
 
       const computeLayout = () => {
         const rowsPerCol = Math.max(1, Math.floor(availH / rowH));
         cols = Math.max(1, Math.ceil(tags.length / rowsPerCol));
-        const gap = 12;
+        const gap = 8;
         const colW = (w - gap * (cols - 1)) / cols;
-        labelW = Math.min(120, Math.max(70, Math.floor(colW * 0.35)));
-        cell = Math.floor((colW - labelW - 6) / 6);
-        rowH = Math.max(18, cell + 4);
+        labelW = Math.min(100, Math.max(55, Math.floor(colW * 0.30)));
+        cell = Math.floor((colW - labelW - 4) / 6);
+        rowH = Math.max(14, cell + 3);
         return { rowsPerCol, gap, colW };
       };
 
@@ -438,7 +438,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           .slice()
           .sort((a, b) => b - a)
           .map((level, i) => {
-            const lx = colX + labelW + 4 + i * cell + cell / 2;
+            const lx = colX + labelW + 2 + i * cell + cell / 2;
             return `<text x="${lx}" y="${bodyY - 12}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="10" font-weight="900" font-family="${fontFamily}">L${level}</text>`;
           })
           .join('');
@@ -465,11 +465,11 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           const row = i - startIdx;
           const ry = bodyY + row * rowH;
           const tagText = `#${tag}`;
-          out += `<text x="${colX}" y="${ry + cell - 2}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="11" font-weight="900" font-family="${fontFamily}">${escapeXml(tagText)}</text>`;
+          out += `<text x="${colX}" y="${ry + cell - 1}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="10" font-weight="900" font-family="${fontFamily}">${escapeXml(tagText)}</text>`;
           for (let j = 0; j < 6; j++) {
             const level = levelOrder[j];
             const count = stats.tagHeatmapCounts[tag]?.[level] || 0;
-            const cx = colX + labelW + 4 + j * cell;
+            const cx = colX + labelW + 2 + j * cell;
             const fill = getColorRgbaByType(count, stats.tagHeatmapMaxCell, stats.type);
             const textFill =
               count === 0
@@ -484,8 +484,8 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                 ? '0.95'
                 : '0.88';
             out += `
-              <rect x="${cx}" y="${ry + 2}" width="${cell - 1}" height="${cell - 1}" rx="3" fill="${fill.rgb}" fill-opacity="${fill.alpha}" stroke="rgb(255,255,255)" stroke-opacity="0.10" />
-              <text x="${cx + (cell - 1) / 2}" y="${ry + cell / 2 + 5}" text-anchor="middle" fill="${textFill}" fill-opacity="${textOpacity}" font-size="9" font-weight="900" font-family="${fontFamily}">${count === 0 ? '·' : count}</text>
+              <rect x="${cx}" y="${ry + 1}" width="${cell - 1}" height="${cell - 1}" rx="2" fill="${fill.rgb}" fill-opacity="${fill.alpha}" stroke="rgb(255,255,255)" stroke-opacity="0.08" />
+              <text x="${cx + (cell - 1) / 2}" y="${ry + cell / 2 + 4}" text-anchor="middle" fill="${textFill}" fill-opacity="${textOpacity}" font-size="8" font-weight="900" font-family="${fontFamily}">${count === 0 ? '·' : count}</text>
             `;
           }
         }
@@ -1098,22 +1098,22 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           </div>
         </div>
         {tagHeatmap.tags.length > 0 ? (
-          <div className="mt-4 overflow-auto rounded-2xl border border-white/70 bg-white/50">
-            <div className="min-w-[420px]">
-              <div className="grid grid-cols-[120px_repeat(6,minmax(0,1fr))] sticky top-0 bg-white/80 backdrop-blur border-b border-slate-100">
-                <div className="px-3 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">标签</div>
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-white/70 bg-white/50">
+            <div className="min-w-[320px] w-full">
+              <div className="grid grid-cols-[80px_repeat(6,minmax(0,1fr))] sticky top-0 bg-white/80 backdrop-blur border-b border-slate-100">
+                <div className="px-2 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">标签</div>
                 {tagHeatmapLevels.map(level => (
-                  <div key={level} className="px-1 py-2 text-center text-[10px] font-black text-slate-500">
+                  <div key={level} className="px-0.5 py-2 text-center text-[10px] font-black text-slate-500">
                     L{level}
                   </div>
                 ))}
               </div>
               <div className="divide-y divide-slate-100/70">
                 {tagHeatmap.tags.map(tag => (
-                  <div key={tag} className="grid grid-cols-[120px_repeat(6,minmax(0,1fr))]">
-                    <div className="px-3 py-2 flex items-center gap-1.5 overflow-hidden">
-                      <span className="text-[11px] font-black text-slate-700 truncate">#{tag}</span>
-                      <span className="text-[9px] font-bold text-slate-300 flex-shrink-0">
+                  <div key={tag} className="grid grid-cols-[80px_repeat(6,minmax(0,1fr))]">
+                    <div className="px-2 py-1.5 flex items-center gap-1 overflow-hidden">
+                      <span className="text-[10px] font-black text-slate-700 truncate">#{tag}</span>
+                      <span className="text-[8px] font-bold text-slate-300 flex-shrink-0">
                         {tagHeatmapLevels.reduce((sum, level) => sum + (tagHeatmap.counts[tag]?.[level] || 0), 0)}
                       </span>
                     </div>
@@ -1127,9 +1127,9 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                           ? 'text-white'
                           : 'text-slate-700';
                       return (
-                        <div key={`${tag}-${level}`} className="p-[1px]">
+                        <div key={`${tag}-${level}`} className="p-[0.5px]">
                           <div
-                            className={`h-8 rounded-md flex items-center justify-center font-black text-[10px] border border-white/20 shadow-sm ${text}`}
+                            className={`h-6 rounded-sm flex items-center justify-center font-black text-[9px] border border-white/10 shadow-sm ${text}`}
                             style={{ backgroundColor: bg }}
                             title={`#${tag} · L${level} · ${count} 次`}
                           >
