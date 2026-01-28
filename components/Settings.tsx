@@ -23,15 +23,15 @@ interface SummaryData {
 }
 
 const MODELS = [
-  'gemini-2.0-flash-exp',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
+  'google-ai-studio/gemini-2.0-flash',
+  'google-ai-studio/gemini-1.5-flash',
+  'google-ai-studio/gemini-1.5-pro',
 ];
 
 const Settings: React.FC = () => {
   const [config, setConfig] = useState<GeminiConfig>({
     apiKey: '',
-    model: 'gemini-1.5-flash',
+    model: 'google-ai-studio/gemini-1.5-flash',
   });
   const [isSaved, setIsSaved] = useState(false);
   const [isFetchingModels, setIsFetchingModels] = useState(false);
@@ -48,7 +48,7 @@ const Settings: React.FC = () => {
           if (data.hasKey) {
             setConfig({
               apiKey: data.apiKey, // 这是脱敏后的 key，仅用于显示
-              model: data.model || 'gemini-1.5-flash'
+              model: data.model || 'google-ai-studio/gemini-1.5-flash'
             });
           }
         }

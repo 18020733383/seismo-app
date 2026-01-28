@@ -79,41 +79,41 @@ ${logsContext}
   "roast": "string (AI吐槽：犀利、幽默、毒舌但有智慧)"
 }`;
 
-    // 4. Call Gemini API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
+    // 4. Call Gemini API via Cloudflare AI Gateway (OpenAI compat)
+    const gatewayUrl = "https://gateway.ai.cloudflare.com/v1/2d3995707c5e4f36a3f79715ec8c489d/mygateway/compat/chat/completions";
+    
+    // Ensure model name is in the format expected by AI Gateway for Google Studio
+    // If user selected 'gemini-1.5-flash', we might need 'google-ai-studio/gemini-1.5-flash'
+    const fullModelName = model.startsWith('google-ai-studio/') ? model : `google-ai-studio/${model}`;
+
+    const response = await fetch(gatewayUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: fullModelName,
+        messages: [
+          {
+            role: "user",
+            content: prompt,
           },
-        }),
-      }
-    );
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
 
     if (!response.ok) {
       const errorData = await response.json() as any;
-      return new Response(JSON.stringify({ error: errorData.error?.message || "Gemini API call failed" }), {
+      return new Response(JSON.stringify({ error: errorData.error?.message || "Cloudflare AI Gateway call failed" }), {
         status: response.status,
         headers: { "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json() as any;
-    const resultText = data.candidates[0].content.parts[0].text;
+    const resultText = data.choices[0].message.content;
     
     // Parse the JSON from the response
     const reportData = JSON.parse(resultText);

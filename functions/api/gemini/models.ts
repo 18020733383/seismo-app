@@ -23,31 +23,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json() as any;
-      return new Response(JSON.stringify({ error: errorData.error?.message || "Failed to fetch models" }), {
-        status: response.status,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const data = await response.json() as any;
-    // Filter for models that support content generation
-    const models = data.models
-      .filter((m: any) => m.supportedGenerationMethods.includes("generateContent"))
-      .map((m: any) => ({
-        name: m.name.replace("models/", ""),
-        displayName: m.displayName,
-      }));
+    // Since we are using Cloudflare AI Gateway compatibility mode, 
+    // we use a static list of common Gemini models supported by AI Gateway.
+    // Dynamic fetching from Google's endpoint might be blocked in some regions.
+    const models = [
+      { name: "google-ai-studio/gemini-2.0-flash", displayName: "Gemini 2.0 Flash" },
+      { name: "google-ai-studio/gemini-1.5-flash", displayName: "Gemini 1.5 Flash" },
+      { name: "google-ai-studio/gemini-1.5-pro", displayName: "Gemini 1.5 Pro" },
+      { name: "google-ai-studio/gemini-1.5-flash-8b", displayName: "Gemini 1.5 Flash-8B" },
+    ];
 
     return new Response(JSON.stringify(models), {
       headers: { "Content-Type": "application/json" },
