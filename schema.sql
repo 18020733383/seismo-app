@@ -7,3 +7,10 @@ CREATE TABLE IF NOT EXISTS logs (
   tags TEXT,
   type TEXT DEFAULT 'negative'
 );
+
+CREATE TABLE IF NOT EXISTS gemini_config (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  apiKey TEXT NOT NULL,
+  model TEXT NOT NULL,
+  updatedAt INTEGER NOT NULL
+);
