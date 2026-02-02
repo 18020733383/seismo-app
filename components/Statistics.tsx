@@ -398,7 +398,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       stats: typeof posterData.negative,
       title: string
     ) => {
-      const tags = stats.tagKeys.slice(0, 18);
+      const tags = stats.tagKeys.slice(0, 6);
       if (tags.length === 0) {
         return `
           <text x="${x}" y="${y + 18}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="900" font-family="${fontFamily}">${escapeXml(title)}</text>
@@ -406,88 +406,70 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
         `;
       }
 
-      const headerHLocal = 40;
+      const headerHLocal = 34;
       const bodyY = y + headerHLocal;
       const availH = Math.max(10, h - headerHLocal);
 
-      let cols = 1;
-      let cell = 16;
-      let labelW = 96;
-      let rowH = 20;
+      const levelOrder = posterData.levels.slice().sort((a, b) => b - a);
 
-      const computeLayout = () => {
-        const rowsPerCol = Math.max(1, Math.floor(availH / rowH));
-        cols = Math.max(1, Math.ceil(tags.length / rowsPerCol));
-        const gap = 8;
-        const colW = (w - gap * (cols - 1)) / cols;
-        labelW = Math.min(140, Math.max(92, Math.floor(colW * 0.50)));
-        cell = Math.floor((colW - labelW - 8) / 6);
-        rowH = Math.max(18, cell + 4);
-        return { rowsPerCol, gap, colW };
-      };
+      const labelW = Math.min(220, Math.max(150, Math.floor(w * 0.22)));
+      const gapX = 8;
+      const gapY = 10;
+      const maxCellByW = Math.floor((w - labelW - gapX * 5 - 2) / 6);
+      const maxCellByH = Math.floor((availH - gapY * Math.max(0, tags.length - 1) - 2) / Math.max(1, tags.length));
+      let cell = Math.min(maxCellByW, maxCellByH);
+      cell = Math.max(26, Math.min(44, cell));
+      const rowH = cell + gapY;
 
-      let layout = computeLayout();
-      while (cell < 16 && cols < 4) {
-        cols += 1;
-        layout = computeLayout();
-      }
-      if (cell < 14) cell = 14;
+      const headerFont = cell >= 40 ? 12 : 11;
+      const tagFont = cell >= 40 ? 14 : 12;
+      const countFont = cell >= 40 ? 16 : cell >= 34 ? 14 : 12;
 
-      const renderHeader = (colX: number) => {
-        const levelLabels = posterData.levels
-          .slice()
-          .sort((a, b) => b - a)
+      const renderHeader = () => {
+        const levelLabels = levelOrder
           .map((level, i) => {
-            const lx = colX + labelW + 2 + i * cell + cell / 2;
-            return `<text x="${lx}" y="${bodyY - 12}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900" font-family="${fontFamily}">L${level}</text>`;
+            const lx = x + labelW + 2 + i * (cell + gapX) + cell / 2;
+            return `<text x="${lx}" y="${bodyY - 10}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="${headerFont}" font-weight="900" font-family="${fontFamily}">L${level}</text>`;
           })
           .join('');
         return `
-          <text x="${colX}" y="${bodyY - 12}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900" font-family="${fontFamily}">TAG</text>
+          <text x="${x}" y="${bodyY - 10}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="${headerFont}" font-weight="900" font-family="${fontFamily}">TAG</text>
           ${levelLabels}
         `;
       };
-
-      const levelOrder = posterData.levels.slice().sort((a, b) => b - a);
 
       let out = `
         <text x="${x}" y="${y + 18}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="900" font-family="${fontFamily}">${escapeXml(title)}</text>
         <text x="${x + w}" y="${y + 18}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900" font-family="${fontFamily}">${escapeXml(stats.timeRangeText)}</text>
       `;
 
-      for (let c = 0; c < cols; c++) {
-        const colX = x + c * (layout.colW + layout.gap);
-        out += renderHeader(colX);
-        const startIdx = c * layout.rowsPerCol;
-        const endIdx = Math.min(tags.length, startIdx + layout.rowsPerCol);
-        for (let i = startIdx; i < endIdx; i++) {
-          const tag = tags[i];
-          const row = i - startIdx;
-          const ry = bodyY + row * rowH;
-          const tagText = `#${tag}`;
-          out += `<text x="${colX}" y="${ry + cell - 2}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="12" font-weight="900" font-family="${fontFamily}">${escapeXml(tagText)}</text>`;
-          for (let j = 0; j < 6; j++) {
-            const level = levelOrder[j];
-            const count = stats.tagHeatmapCounts[tag]?.[level] || 0;
-            const cx = colX + labelW + 2 + j * cell;
-            const fill = getColorRgbaByType(count, stats.tagHeatmapMaxCell, stats.type);
-            const textFill =
-              count === 0
-                ? 'rgb(148,163,184)'
-                : count / Math.max(stats.tagHeatmapMaxCell, 1) >= 0.6
-                ? 'rgb(255,255,255)'
-                : 'rgb(15,23,42)';
-            const textOpacity = 
-              count === 0
-                ? '0.45'
-                : count / Math.max(stats.tagHeatmapMaxCell, 1) >= 0.6
-                ? '0.95'
-                : '0.88';
-            out += `
-              <rect x="${cx}" y="${ry + 2}" width="${cell - 2}" height="${cell - 2}" rx="3" fill="${fill.rgb}" fill-opacity="${fill.alpha}" stroke="rgb(255,255,255)" stroke-opacity="0.08" />
-              <text x="${cx + (cell - 2) / 2}" y="${ry + cell / 2 + 4.5}" text-anchor="middle" fill="${textFill}" fill-opacity="${textOpacity}" font-size="10" font-weight="900" font-family="${fontFamily}">${count === 0 ? '·' : count}</text>
-            `;
-          }
+      out += renderHeader();
+      for (let i = 0; i < tags.length; i++) {
+        const tag = tags[i];
+        const ry = bodyY + i * rowH;
+        const tagText = `#${tag}`;
+        out += `<text x="${x}" y="${ry + cell - 2}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="${tagFont}" font-weight="900" font-family="${fontFamily}">${escapeXml(tagText)}</text>`;
+        for (let j = 0; j < 6; j++) {
+          const level = levelOrder[j];
+          const count = stats.tagHeatmapCounts[tag]?.[level] || 0;
+          const cx = x + labelW + 2 + j * (cell + gapX);
+          const fill = getColorRgbaByType(count, stats.tagHeatmapMaxCell, stats.type);
+          const textFill =
+            count === 0
+              ? 'rgb(148,163,184)'
+              : count / Math.max(stats.tagHeatmapMaxCell, 1) >= 0.6
+              ? 'rgb(255,255,255)'
+              : 'rgb(15,23,42)';
+          const textOpacity = 
+            count === 0
+              ? '0.45'
+              : count / Math.max(stats.tagHeatmapMaxCell, 1) >= 0.6
+              ? '0.95'
+              : '0.88';
+          out += `
+            <rect x="${cx}" y="${ry}" width="${cell}" height="${cell}" rx="6" fill="${fill.rgb}" fill-opacity="${fill.alpha}" stroke="rgb(255,255,255)" stroke-opacity="0.08" />
+            <text x="${cx + cell / 2}" y="${ry + cell / 2 + 5}" text-anchor="middle" fill="${textFill}" fill-opacity="${textOpacity}" font-size="${countFont}" font-weight="900" font-family="${fontFamily}">${count === 0 ? '·' : count}</text>
+          `;
         }
       }
 
