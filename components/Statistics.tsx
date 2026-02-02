@@ -398,7 +398,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       stats: typeof posterData.negative,
       title: string
     ) => {
-      const tags = stats.tagKeys;
+      const tags = stats.tagKeys.slice(0, 18);
       if (tags.length === 0) {
         return `
           <text x="${x}" y="${y + 18}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="900" font-family="${fontFamily}">${escapeXml(title)}</text>
@@ -411,27 +411,27 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       const availH = Math.max(10, h - headerHLocal);
 
       let cols = 1;
-      let cell = 12;
-      let labelW = 80;
-      let rowH = 14;
+      let cell = 16;
+      let labelW = 96;
+      let rowH = 20;
 
       const computeLayout = () => {
         const rowsPerCol = Math.max(1, Math.floor(availH / rowH));
         cols = Math.max(1, Math.ceil(tags.length / rowsPerCol));
-        const gap = 10;
+        const gap = 8;
         const colW = (w - gap * (cols - 1)) / cols;
-        labelW = Math.min(120, Math.max(65, Math.floor(colW * 0.45)));
-        cell = Math.floor((colW - labelW - 2) / 6);
-        rowH = Math.max(12, cell + 2);
+        labelW = Math.min(140, Math.max(92, Math.floor(colW * 0.50)));
+        cell = Math.floor((colW - labelW - 8) / 6);
+        rowH = Math.max(18, cell + 4);
         return { rowsPerCol, gap, colW };
       };
 
       let layout = computeLayout();
-      while (cell < 12 && cols < 4) {
+      while (cell < 16 && cols < 4) {
         cols += 1;
         layout = computeLayout();
       }
-      if (cell < 10) cell = 10;
+      if (cell < 14) cell = 14;
 
       const renderHeader = (colX: number) => {
         const levelLabels = posterData.levels
@@ -439,11 +439,11 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           .sort((a, b) => b - a)
           .map((level, i) => {
             const lx = colX + labelW + 2 + i * cell + cell / 2;
-            return `<text x="${lx}" y="${bodyY - 12}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="10" font-weight="900" font-family="${fontFamily}">L${level}</text>`;
+            return `<text x="${lx}" y="${bodyY - 12}" text-anchor="middle" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900" font-family="${fontFamily}">L${level}</text>`;
           })
           .join('');
         return `
-          <text x="${colX}" y="${bodyY - 12}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="10" font-weight="900" font-family="${fontFamily}">TAG</text>
+          <text x="${colX}" y="${bodyY - 12}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="900" font-family="${fontFamily}">TAG</text>
           ${levelLabels}
         `;
       };
@@ -465,7 +465,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           const row = i - startIdx;
           const ry = bodyY + row * rowH;
           const tagText = `#${tag}`;
-          out += `<text x="${colX}" y="${ry + cell - 1}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="10" font-weight="900" font-family="${fontFamily}">${escapeXml(tagText)}</text>`;
+          out += `<text x="${colX}" y="${ry + cell - 2}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="12" font-weight="900" font-family="${fontFamily}">${escapeXml(tagText)}</text>`;
           for (let j = 0; j < 6; j++) {
             const level = levelOrder[j];
             const count = stats.tagHeatmapCounts[tag]?.[level] || 0;
@@ -484,8 +484,8 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
                 ? '0.95'
                 : '0.88';
             out += `
-              <rect x="${cx}" y="${ry + 1}" width="${cell - 1}" height="${cell - 1}" rx="2" fill="${fill.rgb}" fill-opacity="${fill.alpha}" stroke="rgb(255,255,255)" stroke-opacity="0.08" />
-              <text x="${cx + (cell - 1) / 2}" y="${ry + cell / 2 + 3.5}" text-anchor="middle" fill="${textFill}" fill-opacity="${textOpacity}" font-size="8" font-weight="900" font-family="${fontFamily}">${count === 0 ? '·' : count}</text>
+              <rect x="${cx}" y="${ry + 2}" width="${cell - 2}" height="${cell - 2}" rx="3" fill="${fill.rgb}" fill-opacity="${fill.alpha}" stroke="rgb(255,255,255)" stroke-opacity="0.08" />
+              <text x="${cx + (cell - 2) / 2}" y="${ry + cell / 2 + 4.5}" text-anchor="middle" fill="${textFill}" fill-opacity="${textOpacity}" font-size="10" font-weight="900" font-family="${fontFamily}">${count === 0 ? '·' : count}</text>
             `;
           }
         }
@@ -504,7 +504,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
           : '如果你又在21:00后崩：这是地缘政治，不是你的错';
 
       const ringCx = x + w - 120;
-      const ringCy = y + 148;
+      const ringCy = y + 132;
       const distX = x + cardPad;
       const distY = y + 196;
 
@@ -574,10 +574,22 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
     <rect x="${P}" y="${heatmapSectionY}" width="${innerW}" height="${heatmapSectionH}" rx="${cardR}" fill="url(#shine)" />
     
     <g>
-      ${renderHeatmap(P + 22, heatmapSectionY + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.negative, '震感标签×强度热力图（全量）')}
-      ${renderHeatmap(P + 22, heatmapSectionY + 22 + Math.floor((heatmapSectionH - 66) / 2) + 22, innerW - 44, Math.floor((heatmapSectionH - 66) / 2), posterData.positive, '建设标签×强度热力图（全量）')}
-      <text x="${P + 22}" y="${heatmapSectionY + heatmapSectionH - 18}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">注：颜色越深代表该标签在该强度出现越频繁。你不是脆弱，你是在高频训练神经系统。</text>
-      <text x="${W - P - 22}" y="${heatmapSectionY + heatmapSectionH - 18}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">© Seismo-Mind 智库 · 仅供自嘲与复盘</text>
+      ${(() => {
+        const topPad = 26;
+        const bottomPad = 56;
+        const gap = 30;
+        const innerY = heatmapSectionY + topPad;
+        const innerH = Math.max(120, heatmapSectionH - topPad - bottomPad);
+        const eachH = Math.floor((innerH - gap) / 2);
+        const y1 = innerY;
+        const y2 = innerY + eachH + gap;
+        return [
+          renderHeatmap(P + 22, y1, innerW - 44, eachH, posterData.negative, '震感标签×强度热力图（Top 18）'),
+          renderHeatmap(P + 22, y2, innerW - 44, eachH, posterData.positive, '建设标签×强度热力图（Top 18）'),
+          `<text x="${P + 22}" y="${heatmapSectionY + heatmapSectionH - 22}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">注：颜色越深代表该标签在该强度出现越频繁。你不是脆弱，你是在高频训练神经系统。</text>`,
+          `<text x="${W - P - 22}" y="${heatmapSectionY + heatmapSectionH - 22}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="11" font-weight="700">© Seismo-Mind 智库 · 仅供自嘲与复盘</text>`,
+        ].join('');
+      })()}
     </g>
   </g>
 </svg>`.trim();
