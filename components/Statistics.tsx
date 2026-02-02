@@ -558,7 +558,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
 
   <g font-family="${fontFamily}">
     <text x="${P}" y="${P + 34}" fill="${palette.textMain}" fill-opacity="${palette.textMainAlpha}" font-size="36" font-weight="900">《国家地震与建设统计海报》</text>
-    <text x="${P}" y="${P + 70}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="700">Seismo-Mind · Circadian Sovereignty & Tag Impact Matrix</text>
+    <text x="${P}" y="${P + 70}" fill="${palette.textSub}" fill-opacity="${palette.textSubAlpha}" font-size="14" font-weight="700">Seismo-Mind · Circadian Sovereignty &amp; Tag Impact Matrix</text>
     <text x="${P}" y="${P + 102}" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="700">${escapeXml(now.toLocaleString('zh-CN'))}</text>
     <text x="${W - P}" y="${P + 102}" text-anchor="end" fill="${palette.textDim}" fill-opacity="${palette.textDimAlpha}" font-size="13" font-weight="700">${escapeXml(slogan)}</text>
 

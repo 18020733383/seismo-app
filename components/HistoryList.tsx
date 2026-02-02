@@ -4,11 +4,18 @@ import { SeismicLog, LevelConfig, PositiveLevelConfig, IntensityLevel, LogType }
 interface Props {
   logs: SeismicLog[];
   onDelete: (id: string) => void;
+  onUpdate: (log: SeismicLog) => void;
 }
 
-export const HistoryList: React.FC<Props> = ({ logs, onDelete }) => {
+export const HistoryList: React.FC<Props> = ({ logs, onDelete, onUpdate }) => {
   const [filterLevel, setFilterLevel] = useState<IntensityLevel | 'all'>('all');
   const [filterType, setFilterType] = useState<LogType | 'all'>('all');
+  const [editingLog, setEditingLog] = useState<SeismicLog | null>(null);
+  const [editIntensity, setEditIntensity] = useState<IntensityLevel>(IntensityLevel.Level6);
+  const [editType, setEditType] = useState<LogType>('negative');
+  const [editContent, setEditContent] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
@@ -17,6 +24,40 @@ export const HistoryList: React.FC<Props> = ({ logs, onDelete }) => {
         return matchLevel && matchType;
     });
   }, [logs, filterLevel, filterType]);
+
+  const openEdit = (log: SeismicLog) => {
+    setEditingLog(log);
+    setEditIntensity(log.intensity);
+    setEditType(log.type || 'negative');
+    setEditContent(log.content || '');
+    setEditError(null);
+  };
+
+  const closeEdit = () => {
+    if (isSavingEdit) return;
+    setEditingLog(null);
+    setEditError(null);
+  };
+
+  const saveEdit = async () => {
+    if (!editingLog) return;
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      await onUpdate({
+        ...editingLog,
+        intensity: editIntensity,
+        type: editType,
+        content: editContent,
+      });
+      setEditingLog(null);
+      setEditError(null);
+    } catch (e: any) {
+      setEditError(e?.message || '保存失败');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   if (logs.length === 0) {
     return (
@@ -29,6 +70,100 @@ export const HistoryList: React.FC<Props> = ({ logs, onDelete }) => {
 
   return (
     <div className="w-full max-w-md mx-auto p-4 pb-20 pt-8">
+      {editingLog && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-6 sm:items-center sm:pb-0">
+          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-black text-slate-800">编辑观测日志</div>
+                  <div className="mt-1 text-[11px] font-bold text-slate-400">
+                    {new Date(editingLog.timestamp).toLocaleString('zh-CN')}
+                  </div>
+                </div>
+                <button
+                  onClick={closeEdit}
+                  disabled={isSavingEdit}
+                  className="text-slate-400 hover:text-slate-600 transition-colors text-xl leading-none px-2 disabled:opacity-50"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">性质</div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEditType('negative')}
+                      className={`flex-1 py-2.5 rounded-2xl text-xs font-black transition-all ${
+                        editType === 'negative' ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-slate-50 text-slate-500 border border-slate-200'
+                      }`}
+                    >
+                      📉 震感
+                    </button>
+                    <button
+                      onClick={() => setEditType('positive')}
+                      className={`flex-1 py-2.5 rounded-2xl text-xs font-black transition-all ${
+                        editType === 'positive' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'
+                      }`}
+                    >
+                      🏗️ 建设
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">等级</div>
+                  <select
+                    value={editIntensity}
+                    onChange={(e) => setEditIntensity(Number(e.target.value) as IntensityLevel)}
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-sm font-bold appearance-none"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map(level => (
+                      <option key={level} value={level}>L{level}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">内容</div>
+                  <textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    rows={5}
+                    className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none text-sm font-medium resize-none"
+                  />
+                </div>
+
+                {editError && (
+                  <div className="p-3 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-bold">
+                    {editError}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+              <button
+                onClick={closeEdit}
+                disabled={isSavingEdit}
+                className="flex-1 py-3 rounded-2xl bg-white border border-slate-200 text-slate-700 font-black text-sm disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={isSavingEdit}
+                className="flex-1 py-3 rounded-2xl bg-slate-900 text-white font-black text-sm shadow-lg disabled:opacity-60"
+              >
+                {isSavingEdit ? '保存中...' : '保存修改'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 mb-6">
           <div className="flex items-center justify-between ml-2 pr-2">
             <h3 className="text-gray-500 font-bold flex items-center gap-2">
@@ -110,6 +245,12 @@ export const HistoryList: React.FC<Props> = ({ logs, onDelete }) => {
                               {new Date(log.timestamp).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
                       </div>
+                      <button 
+                          onClick={() => openEdit(log)}
+                          className="text-slate-300 hover:text-slate-600 transition-colors text-sm leading-none px-2"
+                      >
+                          ✎
+                      </button>
                       <button 
                           onClick={() => onDelete(log.id)}
                           className="text-gray-300 hover:text-red-400 transition-colors text-lg leading-none px-2"

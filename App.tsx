@@ -141,6 +141,28 @@ function App() {
     }
   };
 
+  const handleUpdate = async (updated: SeismicLog) => {
+    const oldLogs = [...logs];
+    setLogs(logs.map(l => (l.id === updated.id ? updated : l)));
+
+    try {
+      const response = await fetch(`/api/logs/${updated.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intensity: updated.intensity,
+          type: updated.type,
+          content: updated.content,
+        }),
+      });
+      if (!response.ok) throw new Error('Update failed');
+    } catch (e) {
+      console.error('Failed to update log from server, reverting');
+      setLogs(oldLogs);
+      throw e;
+    }
+  };
+
   // Determine dynamic background gradient based on current level
   const bgGradient = currentLevel 
     ? (currentLogType === 'positive' ? PositiveLevelConfig[currentLevel].bgGradient : LevelConfig[currentLevel].bgGradient)
@@ -237,7 +259,7 @@ function App() {
                       <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                     </div>
                   ) : (
-                    <HistoryList logs={logs} onDelete={handleDelete} />
+                    <HistoryList logs={logs} onDelete={handleDelete} onUpdate={handleUpdate} />
                   )}
                 </div>
               ) : activeTab === 'stats' ? (
