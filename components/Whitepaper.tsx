@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { SeismicLog } from '../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { PeriodFile, PeriodFileEntry, PeriodFileStatus, SeismicLog } from '../types';
 
 interface WhitepaperProps {
   logs: SeismicLog[];
@@ -44,6 +44,206 @@ export const Whitepaper: React.FC<WhitepaperProps> = ({ logs }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [periodFiles, setPeriodFiles] = useState<PeriodFile[]>([]);
+  const [isLoadingPeriodFiles, setIsLoadingPeriodFiles] = useState(false);
+  const [periodFilesError, setPeriodFilesError] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
+
+  const [isCreatingFile, setIsCreatingFile] = useState(false);
+  const [createTitle, setCreateTitle] = useState('');
+  const [createStart, setCreateStart] = useState('');
+  const [createEnd, setCreateEnd] = useState('');
+  const [createStatus, setCreateStatus] = useState<PeriodFileStatus>('in_progress');
+  const [createDescription, setCreateDescription] = useState('');
+
+  const [activeFileId, setActiveFileId] = useState<string | null>(null);
+  const activeFile = useMemo(
+    () => (activeFileId ? periodFiles.find(f => f.id === activeFileId) || null : null),
+    [activeFileId, periodFiles]
+  );
+  const [activeDraft, setActiveDraft] = useState<PeriodFile | null>(null);
+  const [isSavingActive, setIsSavingActive] = useState(false);
+
+  const [entryAt, setEntryAt] = useState('');
+  const [entrySubjective, setEntrySubjective] = useState('');
+  const [entryObjective, setEntryObjective] = useState('');
+  const [entryLogIds, setEntryLogIds] = useState<string[]>([]);
+  const [showLogPicker, setShowLogPicker] = useState(false);
+
+  const genId = () => Math.random().toString(36).slice(2, 10);
+
+  const pad2 = (n: number) => String(n).padStart(2, '0');
+  const toLocalInputValue = (ts: number) => {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  };
+  const formatDateRange = (startTs: number, endTs: number | null) => {
+    const s = new Date(startTs).toLocaleDateString('zh-CN');
+    if (!endTs) return `${s} - 至今`;
+    const e = new Date(endTs).toLocaleDateString('zh-CN');
+    return `${s} - ${e}`;
+  };
+
+  const STATUS_META: Record<PeriodFileStatus, { label: string; badge: string }> = {
+    not_started: { label: '未开始', badge: 'bg-slate-100 text-slate-600 border border-slate-200' },
+    in_progress: { label: '进行中', badge: 'bg-blue-50 text-blue-700 border border-blue-200' },
+    done: { label: '完成', badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
+    archived: { label: '存档', badge: 'bg-slate-50 text-slate-500 border border-slate-200' },
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoadingPeriodFiles(true);
+      setPeriodFilesError(null);
+      try {
+        const res = await fetch(`/api/period-files${showArchived ? '?includeArchived=1' : ''}`);
+        if (!res.ok) throw new Error('加载时期文件失败');
+        const data = (await res.json()) as PeriodFile[];
+        setPeriodFiles(Array.isArray(data) ? data : []);
+        localStorage.setItem('period_files_v1', JSON.stringify(Array.isArray(data) ? data : []));
+      } catch (e: any) {
+        const local = localStorage.getItem('period_files_v1');
+        if (local) {
+          try {
+            const data = JSON.parse(local) as PeriodFile[];
+            setPeriodFiles(Array.isArray(data) ? data : []);
+          } catch {
+            setPeriodFiles([]);
+          }
+        }
+        setPeriodFilesError(e?.message || '加载失败');
+      } finally {
+        setIsLoadingPeriodFiles(false);
+      }
+    };
+    load();
+  }, [showArchived]);
+
+  useEffect(() => {
+    if (!activeFile) {
+      setActiveDraft(null);
+      return;
+    }
+    setActiveDraft(activeFile);
+    setEntryAt(toLocalInputValue(Date.now()));
+    setEntrySubjective('');
+    setEntryObjective('');
+    setEntryLogIds([]);
+    setShowLogPicker(false);
+  }, [activeFileId]);
+
+  const candidateLogs = useMemo(() => {
+    if (!activeDraft) return [];
+    const end = activeDraft.endTs ?? Date.now();
+    const filtered = logs
+      .filter(l => l.timestamp >= activeDraft.startTs && l.timestamp <= end)
+      .slice()
+      .sort((a, b) => b.timestamp - a.timestamp);
+    return filtered.slice(0, 20);
+  }, [activeDraft, logs]);
+
+  const saveActiveDraft = async (next: PeriodFile) => {
+    setIsSavingActive(true);
+    try {
+      const res = await fetch(`/api/period-files/${next.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next),
+      });
+      if (!res.ok) throw new Error('保存失败');
+      const updated = (await res.json()) as PeriodFile;
+      setPeriodFiles(prev => {
+        const list = prev.map(p => (p.id === updated.id ? updated : p));
+        localStorage.setItem('period_files_v1', JSON.stringify(list));
+        return list;
+      });
+      setActiveDraft(updated);
+      if (!showArchived && updated.status === 'archived') {
+        setActiveFileId(null);
+        setPeriodFiles(prev => {
+          const list = prev.filter(p => p.id !== updated.id);
+          localStorage.setItem('period_files_v1', JSON.stringify(list));
+          return list;
+        });
+      }
+    } catch (e: any) {
+      setPeriodFilesError(e?.message || '保存失败');
+    } finally {
+      setIsSavingActive(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    const title = createTitle.trim();
+    const startTs = createStart ? new Date(createStart).getTime() : 0;
+    const endTs = createEnd ? new Date(createEnd).getTime() : null;
+    if (!title || !startTs) {
+      setPeriodFilesError('请填写标题与开始时间');
+      return;
+    }
+    const payload: PeriodFile = {
+      id: genId(),
+      title,
+      startTs,
+      endTs,
+      status: createStatus,
+      description: createDescription,
+      entries: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    try {
+      const res = await fetch('/api/period-files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('创建失败');
+      const created = (await res.json()) as PeriodFile;
+      setPeriodFiles(prev => {
+        const list = [created, ...prev];
+        localStorage.setItem('period_files_v1', JSON.stringify(list));
+        return list;
+      });
+      setIsCreatingFile(false);
+      setCreateTitle('');
+      setCreateStart('');
+      setCreateEnd('');
+      setCreateDescription('');
+      setCreateStatus('in_progress');
+      setActiveFileId(created.id);
+    } catch (e: any) {
+      setPeriodFilesError(e?.message || '创建失败');
+    }
+  };
+
+  const handleAddEntry = async () => {
+    if (!activeDraft) return;
+    const ts = entryAt ? new Date(entryAt).getTime() : 0;
+    if (!ts || !entrySubjective.trim() || !entryObjective.trim()) {
+      setPeriodFilesError('请填写时间、主观情绪与客观背景');
+      return;
+    }
+    const nextEntry: PeriodFileEntry = {
+      id: genId(),
+      timestamp: ts,
+      subjective: entrySubjective.trim(),
+      objective: entryObjective.trim(),
+      logIds: entryLogIds,
+    };
+    const next: PeriodFile = {
+      ...activeDraft,
+      entries: [...(activeDraft.entries || []), nextEntry].sort((a, b) => a.timestamp - b.timestamp),
+      updatedAt: Date.now(),
+    };
+    await saveActiveDraft(next);
+    setEntryAt(toLocalInputValue(Date.now()));
+    setEntrySubjective('');
+    setEntryObjective('');
+    setEntryLogIds([]);
+    setShowLogPicker(false);
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError(null);
@@ -79,6 +279,85 @@ export const Whitepaper: React.FC<WhitepaperProps> = ({ logs }) => {
       </div>
 
       <div className="space-y-6">
+        <div className="glass-panel p-6 rounded-3xl shadow-lg border border-white/50 bg-white/60">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-black text-slate-800">国家时期文件</h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                Timeline Files · 主观情绪 + 客观背景
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowArchived(v => !v)}
+                className="px-3 py-2 rounded-2xl bg-white/70 border border-slate-200 text-[11px] font-black text-slate-700 hover:bg-white transition-all"
+              >
+                {showArchived ? '隐藏存档' : '显示存档'}
+              </button>
+              <button
+                onClick={() => {
+                  setPeriodFilesError(null);
+                  setIsCreatingFile(true);
+                  setCreateStart(toLocalInputValue(Date.now()));
+                  setCreateEnd('');
+                }}
+                className="px-3 py-2 rounded-2xl bg-slate-900 text-white text-[11px] font-black shadow-lg shadow-slate-900/20 active:scale-95 transition-all"
+              >
+                ＋ 新增文件
+              </button>
+            </div>
+          </div>
+
+          {periodFilesError && (
+            <div className="mb-3 p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold">
+              ⚠️ {periodFilesError}
+            </div>
+          )}
+
+          {isLoadingPeriodFiles ? (
+            <div className="flex justify-center py-6">
+              <div className="w-7 h-7 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : periodFiles.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm font-bold text-slate-500">还没有时期文件</p>
+              <p className="text-[10px] text-slate-400 mt-1">用来记录“某段时间发生了什么”，并串起情绪时间线</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {periodFiles
+                .filter(f => (showArchived ? true : f.status !== 'archived'))
+                .map(f => {
+                  const meta = STATUS_META[f.status];
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => setActiveFileId(f.id)}
+                      className="w-full text-left bg-white/70 border border-slate-100 rounded-2xl p-4 hover:bg-white transition-all active:scale-[0.99]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-black text-slate-800 truncate">{f.title}</span>
+                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${meta.badge}`}>{meta.label}</span>
+                          </div>
+                          <div className="mt-1 text-[11px] font-bold text-slate-500">
+                            {formatDateRange(f.startTs, f.endTs)}
+                            <span className="mx-2 text-slate-300">·</span>
+                            {f.entries?.length || 0} 条记录
+                          </div>
+                        </div>
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-0.5">
+                          打开
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+
         {/* Action Area */}
         <div className="glass-panel p-6 rounded-3xl shadow-lg border border-white/50 bg-white/60">
           <p className="text-sm text-slate-600 mb-4 font-medium leading-relaxed">
@@ -291,6 +570,309 @@ export const Whitepaper: React.FC<WhitepaperProps> = ({ logs }) => {
           </div>
         )}
       </div>
+
+      {isCreatingFile && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-black text-slate-800">新增时期文件</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  描述一段时间发生了什么
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCreatingFile(false)}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-black hover:bg-slate-200 transition-all"
+              >
+                关闭
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <div className="text-[10px] font-black text-slate-400 uppercase mb-1">标题</div>
+                <input
+                  value={createTitle}
+                  onChange={(e) => setCreateTitle(e.target.value)}
+                  placeholder="例如：项目冲刺期 / 搬家周 / 情绪修复期"
+                  className="w-full px-4 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-1">开始时间</div>
+                  <input
+                    type="datetime-local"
+                    value={createStart}
+                    onChange={(e) => setCreateStart(e.target.value)}
+                    className="w-full px-3 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-xs font-bold"
+                  />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-1">结束时间</div>
+                  <input
+                    type="datetime-local"
+                    value={createEnd}
+                    onChange={(e) => setCreateEnd(e.target.value)}
+                    className="w-full px-3 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-xs font-bold"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-1">标记</div>
+                  <select
+                    value={createStatus}
+                    onChange={(e) => setCreateStatus(e.target.value as PeriodFileStatus)}
+                    className="w-full px-3 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-xs font-bold appearance-none"
+                  >
+                    <option value="not_started">未开始</option>
+                    <option value="in_progress">进行中</option>
+                    <option value="done">完成</option>
+                    <option value="archived">存档（隐藏）</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={handleCreate}
+                    className="w-full py-3 rounded-2xl bg-slate-900 text-white font-black text-xs shadow-lg shadow-slate-900/20 active:scale-95 transition-all"
+                  >
+                    创建文件
+                  </button>
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] font-black text-slate-400 uppercase mb-1">摘要（可选）</div>
+                <textarea
+                  value={createDescription}
+                  onChange={(e) => setCreateDescription(e.target.value)}
+                  placeholder="这段时间的主线事件、压力源、目标…"
+                  className="w-full h-24 px-4 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium resize-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeDraft && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-white/50 overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-black text-slate-800 truncate">{activeDraft.title}</div>
+                <div className="text-[10px] font-bold text-slate-400 mt-1">
+                  {formatDateRange(activeDraft.startTs, activeDraft.endTs)}
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveFileId(null)}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-black hover:bg-slate-200 transition-all"
+              >
+                关闭
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5 max-h-[78vh] overflow-auto">
+              <div className="space-y-3">
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-1">标题</div>
+                  <input
+                    value={activeDraft.title}
+                    onChange={(e) => setActiveDraft({ ...activeDraft, title: e.target.value })}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase mb-1">开始时间</div>
+                    <input
+                      type="datetime-local"
+                      value={toLocalInputValue(activeDraft.startTs)}
+                      onChange={(e) => setActiveDraft({ ...activeDraft, startTs: new Date(e.target.value).getTime() })}
+                      className="w-full px-3 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase mb-1">结束时间</div>
+                    <input
+                      type="datetime-local"
+                      value={activeDraft.endTs ? toLocalInputValue(activeDraft.endTs) : ''}
+                      onChange={(e) => setActiveDraft({ ...activeDraft, endTs: e.target.value ? new Date(e.target.value).getTime() : null })}
+                      className="w-full px-3 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-xs font-bold"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase mb-1">标记</div>
+                    <select
+                      value={activeDraft.status}
+                      onChange={(e) => setActiveDraft({ ...activeDraft, status: e.target.value as PeriodFileStatus })}
+                      className="w-full px-3 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-xs font-bold appearance-none"
+                    >
+                      <option value="not_started">未开始</option>
+                      <option value="in_progress">进行中</option>
+                      <option value="done">完成</option>
+                      <option value="archived">存档（隐藏）</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={() => saveActiveDraft({ ...activeDraft, updatedAt: Date.now() })}
+                      disabled={isSavingActive}
+                      className="w-full py-3 rounded-2xl bg-slate-900 text-white font-black text-xs shadow-lg shadow-slate-900/20 active:scale-95 transition-all disabled:opacity-60"
+                    >
+                      {isSavingActive ? '保存中...' : '保存'}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-1">摘要</div>
+                  <textarea
+                    value={activeDraft.description || ''}
+                    onChange={(e) => setActiveDraft({ ...activeDraft, description: e.target.value })}
+                    className="w-full h-24 px-4 py-3 rounded-2xl bg-white/60 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-3xl p-4 border border-slate-100">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="text-sm font-black text-slate-800">情绪时间线</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      主观情绪 / 客观背景 / 关联日志
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-black text-slate-400">
+                    {activeDraft.entries?.length || 0} 条
+                  </div>
+                </div>
+
+                {activeDraft.entries?.length ? (
+                  <div className="space-y-2 mb-4">
+                    {activeDraft.entries
+                      .slice()
+                      .sort((a, b) => b.timestamp - a.timestamp)
+                      .map((en) => (
+                        <div key={en.id} className="bg-white rounded-2xl p-3 border border-slate-100">
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] font-black text-slate-700">
+                              {new Date(en.timestamp).toLocaleString('zh-CN')}
+                            </div>
+                            <div className="text-[10px] font-black text-slate-400">
+                              {en.logIds?.length ? `${en.logIds.length} 条日志` : '无关联'}
+                            </div>
+                          </div>
+                          <div className="mt-2 space-y-1">
+                            <div className="text-xs font-bold text-slate-800">{en.subjective}</div>
+                            <div className="text-[11px] font-medium text-slate-600">{en.objective}</div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 mb-3">
+                    <div className="text-xs font-bold text-slate-500">还没有时间线记录</div>
+                    <div className="text-[10px] text-slate-400 mt-1">先加一条：当时感觉如何 + 当时发生了什么</div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <div className="text-[10px] font-black text-slate-400 uppercase mb-1">时间</div>
+                      <input
+                        type="datetime-local"
+                        value={entryAt}
+                        onChange={(e) => setEntryAt(e.target.value)}
+                        className="w-full px-3 py-3 rounded-2xl bg-white border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-xs font-bold"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase mb-1">主观情绪</div>
+                    <input
+                      value={entrySubjective}
+                      onChange={(e) => setEntrySubjective(e.target.value)}
+                      placeholder="例如：焦虑/兴奋/麻木/心流/委屈…"
+                      className="w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium"
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-black text-slate-400 uppercase mb-1">客观背景</div>
+                    <input
+                      value={entryObjective}
+                      onChange={(e) => setEntryObjective(e.target.value)}
+                      placeholder="例如：开会被质疑/熬夜赶工/和朋友见面/身体不舒服…"
+                      className="w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={() => setShowLogPicker(v => !v)}
+                      className="px-3 py-2 rounded-2xl bg-white border border-slate-200 text-[11px] font-black text-slate-700 hover:bg-slate-50 transition-all"
+                    >
+                      {showLogPicker ? '收起日志选择' : `关联日志（${entryLogIds.length}）`}
+                    </button>
+                    <button
+                      onClick={handleAddEntry}
+                      disabled={isSavingActive}
+                      className="px-4 py-2 rounded-2xl bg-indigo-600 text-white text-[11px] font-black shadow-lg shadow-indigo-600/20 active:scale-95 transition-all disabled:opacity-60"
+                    >
+                      添加记录
+                    </button>
+                  </div>
+
+                  {showLogPicker && (
+                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                      <div className="px-3 py-2 border-b border-slate-100 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        范围内最近 20 条日志
+                      </div>
+                      <div className="max-h-48 overflow-auto divide-y divide-slate-100">
+                        {candidateLogs.length === 0 ? (
+                          <div className="p-3 text-xs font-bold text-slate-500">该时间范围内暂无日志</div>
+                        ) : (
+                          candidateLogs.map(l => {
+                            const checked = entryLogIds.includes(l.id);
+                            return (
+                              <label key={l.id} className="flex items-start gap-3 p-3 cursor-pointer hover:bg-slate-50">
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() =>
+                                    setEntryLogIds(prev => (checked ? prev.filter(x => x !== l.id) : [...prev, l.id]))
+                                  }
+                                  className="mt-0.5 w-4 h-4"
+                                />
+                                <div className="min-w-0">
+                                  <div className="text-[11px] font-black text-slate-700">
+                                    {new Date(l.timestamp).toLocaleString('zh-CN')}
+                                  </div>
+                                  <div className="text-[11px] font-medium text-slate-600 truncate">
+                                    {l.content}
+                                  </div>
+                                  {l.tags?.length ? (
+                                    <div className="mt-1 text-[10px] font-bold text-slate-400 truncate">
+                                      #{l.tags.join(' #')}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

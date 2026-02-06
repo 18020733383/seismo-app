@@ -19,6 +19,28 @@ export interface SeismicLog {
   type: LogType;
 }
 
+export type PeriodFileStatus = 'not_started' | 'in_progress' | 'done' | 'archived';
+
+export interface PeriodFileEntry {
+  id: string;
+  timestamp: number;
+  subjective: string;
+  objective: string;
+  logIds: string[];
+}
+
+export interface PeriodFile {
+  id: string;
+  title: string;
+  startTs: number;
+  endTs: number | null;
+  status: PeriodFileStatus;
+  description: string;
+  entries: PeriodFileEntry[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface LevelMetadata {
   label: string;
   alertName: string;

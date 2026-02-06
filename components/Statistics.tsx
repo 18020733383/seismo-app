@@ -13,6 +13,7 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
   const [hoveredHour, setHoveredHour] = useState<number | null>(null);
   const [isExportingPoster, setIsExportingPoster] = useState(false);
   const [posterStatus, setPosterStatus] = useState<'idle' | 'done' | 'error'>('idle');
+  const [posterStatusFormat, setPosterStatusFormat] = useState<'svg' | 'png' | null>(null);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => (log.type || 'negative') === statsType);
@@ -579,10 +580,55 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
     return poster;
   };
 
+  const exportPosterSvg = async () => {
+    if (isExportingPoster) return;
+    setIsExportingPoster(true);
+    setPosterStatus('idle');
+    setPosterStatusFormat('svg');
+    try {
+      const svg = buildPosterSvg();
+
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svg, 'image/svg+xml');
+      const errorNode = doc.querySelector('parsererror');
+      if (errorNode) throw new Error('Invalid SVG structure');
+
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `seismo-poster-${new Date().toISOString().slice(0, 10)}.svg`;
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 300);
+
+      setPosterStatus('done');
+      setTimeout(() => {
+        setPosterStatus('idle');
+        setPosterStatusFormat(null);
+      }, 2500);
+    } catch (e) {
+      console.error('Export SVG failed caught in catch:', e);
+      setPosterStatus('error');
+      setTimeout(() => {
+        setPosterStatus('idle');
+        setPosterStatusFormat(null);
+      }, 3000);
+    } finally {
+      setIsExportingPoster(false);
+    }
+  };
+
   const exportPosterPng = async () => {
     if (isExportingPoster) return;
     setIsExportingPoster(true);
     setPosterStatus('idle');
+    setPosterStatusFormat('png');
     try {
       console.log('Starting poster export...');
       const svg = buildPosterSvg();
@@ -661,15 +707,28 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
       }, 300);
 
       setPosterStatus('done');
-      setTimeout(() => setPosterStatus('idle'), 2500);
+      setTimeout(() => {
+        setPosterStatus('idle');
+        setPosterStatusFormat(null);
+      }, 2500);
     } catch (e) {
       console.error('Export failed caught in catch:', e);
       setPosterStatus('error');
-      setTimeout(() => setPosterStatus('idle'), 3000);
+      setTimeout(() => {
+        setPosterStatus('idle');
+        setPosterStatusFormat(null);
+      }, 3000);
     } finally {
       setIsExportingPoster(false);
     }
   };
+
+  const svgDone = posterStatus === 'done' && posterStatusFormat === 'svg';
+  const svgError = posterStatus === 'error' && posterStatusFormat === 'svg';
+  const svgExporting = isExportingPoster && posterStatusFormat === 'svg';
+  const pngDone = posterStatus === 'done' && posterStatusFormat === 'png';
+  const pngError = posterStatus === 'error' && posterStatusFormat === 'png';
+  const pngExporting = isExportingPoster && posterStatusFormat === 'png';
 
   return (
     <div className="space-y-6 pb-10">
@@ -704,25 +763,34 @@ export const Statistics: React.FC<StatisticsProps> = ({ logs }) => {
         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
           海报导出会同时包含 震感 + 建设
         </div>
-        <button
-          onClick={exportPosterPng}
-          disabled={isExportingPoster}
-          className={`px-4 py-2 rounded-xl text-[11px] font-black transition-all active:scale-95 ${
-            posterStatus === 'done'
-              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : posterStatus === 'error'
-              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-              : 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
-          } ${isExportingPoster ? 'opacity-60 cursor-not-allowed' : ''}`}
-        >
-          {posterStatus === 'done'
-            ? '✅ 已导出'
-            : posterStatus === 'error'
-            ? '⚠️ 导出失败'
-            : isExportingPoster
-            ? '正在生成海报...'
-            : '🖼️ 导出统计海报'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPosterSvg}
+            disabled={isExportingPoster}
+            className={`px-3.5 py-2 rounded-xl text-[11px] font-black transition-all active:scale-95 ${
+              svgDone
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : svgError
+                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                : 'bg-white/80 text-slate-800 border border-white/60 shadow-lg shadow-slate-900/10'
+            } ${isExportingPoster ? 'opacity-60 cursor-not-allowed' : ''}`}
+          >
+            {svgDone ? '✅ SVG 已导出' : svgError ? '⚠️ SVG 失败' : svgExporting ? '正在生成 SVG...' : '⬇️ 导出 SVG'}
+          </button>
+          <button
+            onClick={exportPosterPng}
+            disabled={isExportingPoster}
+            className={`px-3.5 py-2 rounded-xl text-[11px] font-black transition-all active:scale-95 ${
+              pngDone
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : pngError
+                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                : 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
+            } ${isExportingPoster ? 'opacity-60 cursor-not-allowed' : ''}`}
+          >
+            {pngDone ? '✅ PNG 已导出' : pngError ? '⚠️ PNG 失败' : pngExporting ? '正在生成 PNG...' : '🖼️ 导出 PNG'}
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
